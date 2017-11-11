@@ -1,0 +1,20 @@
+{
+  "name": "parser",
+  "productName": "parser",
+  "version": "1.0.0",
+  "buildVer": 8,
+  "author": "guanyuxin@meituan.com",
+  "description": "translate xsl",
+  "main": "main.js",
+  "scripts": {},
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.3",
+    "express": "^4.16.2",
+    "fs-extra": "^4.0.2",
+    "glob": "^7.1.1",
+    "request": "^2.83.0"
+  }
+}
