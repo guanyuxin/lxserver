@@ -301,7 +301,7 @@ var RULES = {
       }
     }
   },
-  // 不包含xx
+  // 只包含xx集合内的字符
   onlyContain: {
     title: "只包含",
     paramA: true,
@@ -410,7 +410,9 @@ function Rule(data, file) {
   for (var key in data.conds) {
     var cond = data.conds[key];
     if (cond.datatype == "br") {
-      var parsed = '\n'
+      var parsed = {"\n":{
+        match: "\n"
+      }}
     } else if (cond.datatype == "empty") {
       var parsed = ''
     } else if (cond.datatype == "custom") {
@@ -465,20 +467,29 @@ function parsePairFile(text) {
   for (var key in lines) {
     var mean = lines[key].split('#')[0].trim();
     if (mean) {
-      var pair = mean.split('<<<');
+      var pair = mean.split('>>>');
       if (pair.length < 2) {continue}
-      var src = pair[1].trim();
-      if (src.charAt(0) == '"' && src.charAt(src.length-1) == '"') {
-        src = src.substr(1, src.length-2);
+      var src = pair[0].trim();
+      
+      src = src.split('__');
+      for (var i = 0; i < src.length; i++) {
+        var code = src[i].trim();
+        if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
+          code = code.substr(1, code.length-2);
+        }
+        src[i] = code;
       }
-      src = src.split(',');
       res.src.push(src);
 
-      var dest = pair[0].trim();
-      if (dest.charAt(0) == '"' && dest.charAt(dest.length-1) == '"') {
-        dest = dest.substr(1, dest.length-2);
+      var dest = pair[1].trim();
+      dest = dest.split('__')
+      for (var i = 0; i < dest.length; i++) {
+        var code = dest[i].trim();
+        if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
+          code = code.substr(1, code.length-2);
+        }
+        dest[i] = code;
       }
-      dest = dest.split(',')
       res.dest.push(dest);
     }
   }
@@ -499,8 +510,8 @@ XHR.GET('/config', function (config) {
     el: "#RuleEditor",
     data () {
       return {
-        srcCode: "",
-        destCode: "ee",
+        srcCode: "步骤1.2.2、根据步骤1.1.2中得到的有效路径和步骤1.2.1中得到的信道估计，由信道冲激响应器生成信道冲激响应H＝(h<sub>1</sub>，h<sub>2</sub>，Λ，h<sub>T</sub>)，其长度T表示系统支持的最大时延，该信道冲激响应有效路径位置上的值为该路径上的信道估计值，非有效路径位置上的值为零，即：",
+        destCode: "ステップ1.2.2とステップ1.1.2で得られた有効パスとステップ1.2.1で得られたチャネル推定値はチャネルインパルス応答からチャネルインパルス応答生成H=(h1である，h2である，ΛはhT)，その長さTシステムによってサポートされる最大遅延を示す，チャネルインパルス有効パス位置応答上の値は、その経路上のチャネル推定値である，非有効パス位置上の値はゼロであり即：",
         editing: "rule",
         fileId: 0,
         ruleId: 0,
@@ -537,6 +548,12 @@ XHR.GET('/config', function (config) {
       }
     },
     methods: {
+      addFile() {
+        this.files.push({
+          name: "新增数据",
+          data: ""
+        })
+      },
       editFile(key) {
         this.editing = "file";
         this.fileId = key
@@ -553,6 +570,14 @@ XHR.GET('/config', function (config) {
         POSTStr('/config', data, function (e) {
           alert('保存成功');
         })
+      },
+      addCond(t) {
+        t.conds.push({
+          "type":"contain",
+          "data":"",
+          "datatype": "custom",
+          "paramA":"dest",
+        });
       },
       addRule() {
         this.rules.push({"errMessage":"新的要求","conds":[{
