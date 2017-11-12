@@ -33,7 +33,6 @@ app.get('/config', function(req, res) {
 })
 
 app.post('/config', function(req, res) {
-  console.log(req.body)
   saveRules(req.body);
   res.send("1");
 })

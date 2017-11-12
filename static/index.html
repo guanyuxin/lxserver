@@ -286,7 +286,12 @@ label:hover .nck {
 
     <div class="editArea" v-if="editing=='rule'">
       <div class="rulePanel" v-for="(rule,index) in rules">
-        <span class="id">规则{{(index+1)}}</span>：
+        <select v-on:change="editRule($event, index)">
+          <option value="default" selected>规则{{(index+1)}}</option>
+          <option v-if="index>0" value="moveup">向上移动</option>
+          <option v-if="index<rules.length-1" value="movedown">向下移动</option>
+          <option value="delete">删除</option>
+        </select>:
         <div v-for="(cond, index) in rule.conds">
           {{index == 0 ? "要求" : "或者"}}
           <span v-if="getRULE(cond).paramA && getRULE(cond).paramB">
@@ -326,7 +331,10 @@ label:hover .nck {
         <label><input v-model="rule.removeMatched" class="nck" type="checkbox">之后的检测忽略匹配到的内容</label>
 
         <div>
-          否则提示：
+          否则<select v-model="rule.act">
+            <option value="displayError">提示：</option>
+            <option value="exit">结束检测</option>
+          </select>
           <div class="rule-data">
             <xeditor v-model="rule.errMessage"></xeditor>
           </div>

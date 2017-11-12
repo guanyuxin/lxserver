@@ -199,6 +199,11 @@ function highlightMatchesRev(str, matches) {
   return dest;
 }
 
+var lang = {
+  "origin": "原文",
+  "dest": "译文"
+}
+
 var RULES = {
   // a 和 b需要一一对应
   match: {
@@ -214,7 +219,7 @@ var RULES = {
         dest: BuildTreeByGroup(cfg.dest)
       };
     },
-    valid: function (data, config, removeMatched) {
+    valid: function (data, config, removeMatched, cond) {
       var a = data.paramA;
       var b = data.paramB;
       var matchesA = MatchTreeAllByGroup(config.src, a);
@@ -229,7 +234,7 @@ var RULES = {
         var matchB = matchesB[key] || [];
         if (matchA.length !== matchB.length) {
           errors.push({
-            message: `原文中的（${config.srcRaw[key]}）的数量与译文中的（${config.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${config.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -241,7 +246,7 @@ var RULES = {
         var matchB = matchesB[key] || [];
         if (matchA.length == 0 && matchB.length !== 0) {
           errors.push({
-            message: `原文中的（${config.srcRaw[key]}）的数量与译文中的（${config.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${config.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -278,7 +283,7 @@ var RULES = {
       config = config.split(/[\n]/)
       return BuildTree(config);
     },
-    valid: function (data, config) {
+    valid: function (data, config, removeMatched, cond) {
       var b = data.paramA;
       var matches = [];
       var str = "";
@@ -291,7 +296,7 @@ var RULES = {
 
       if (matches.length) {
         var errors = [{
-          message: `译文不能包含${matches.map(data=>data.match).join(',')}`,
+          message: lang[cond.paramA] + `不能包含${matches.map(data=>data.match).join(',')}`,
           destDiff: highlightMatches(b, matches),
         }];
       }
@@ -309,7 +314,7 @@ var RULES = {
       config = config.split(/[\n,]/)
       return BuildTree(config);
     },
-    valid: function (data, config) {
+    valid: function (data, config, removeMatched, cond) {
       var b = data.paramA;
       var matches = [];
       var str = "";
@@ -327,7 +332,7 @@ var RULES = {
 
       if (matches.length) {
         var errors = [{
-          message: `例外的字符${matches.map(data=>data.match).join(',')}`,
+          message: `${lang[cond.paramA]}中例外的字符${matches.map(data=>data.match).join(',')}`,
           destDiff: highlightMatches(b, matches),
         }];
       }
@@ -345,7 +350,7 @@ var RULES = {
     initConfig: function (config) {
       return BuildTree(config.split('').reverse().join('').split(/[\n,]/))
     },
-    valid: function (data, config) {
+    valid: function (data, config, removeMatched, cond) {
       var str = data.paramA.split('').reverse().join('');
       var res = MatchTree(config, str, 0);
       
@@ -353,12 +358,12 @@ var RULES = {
       var matches = [];
       if (res) {
         matches.push({
-          message: "结尾包含了" + res.match.split('').reverse().join(''),
+          message: `${lang[cond.paramA]}结尾包含了` + res.match.split('').reverse().join(''),
           srcDiff: highlightMatchesRev(data.paramA, [res])
         })
       } else {
         errors.push({
-          message: "没有结尾匹配"
+          message: `${lang[cond.paramA]}没有结尾要求内容`
         })
       }
       return {
@@ -407,6 +412,7 @@ function Rule(data, file) {
   this.conds = [];
   this.errMessage = data.errMessage;
   this.removeMatched = data.removeMatched;
+  this.act = data.act;
   for (var key in data.conds) {
     var cond = data.conds[key];
     if (cond.datatype == "br") {
@@ -436,7 +442,7 @@ Rule.prototype.valid = function(line) {
     var match = RULES[cond.type].valid({
       paramA: line[cond.paramA],
       paramB: line[cond.paramB],
-    }, parsed, this.removeMatched);
+    }, parsed, this.removeMatched, cond);
 
     if (this.removeMatched) {
       line[cond.paramA] = match.paramA;
@@ -548,11 +554,32 @@ XHR.GET('/config', function (config) {
       }
     },
     methods: {
+      editRule(e, i) {
+        var act = e.target.value;
+        if (act == "delete" && confirm("确认删除此规则？")) {
+          this.rules.splice(i, 1);
+        }
+        if (act == 'movedown' && i < this.rules.length - 1) {
+          var tmp = this.rules[i];
+          this.rules[i] = this.rules[i + 1]
+          this.rules[i + 1] = tmp;
+          this.$forceUpdate();
+        }
+        if (act == 'moveup' && i > 0) {
+          var tmp = this.rules[i];
+          this.rules[i] = this.rules[i - 1]
+          this.rules[i - 1] = tmp;
+          this.$forceUpdate();
+        }
+        e.target.value = "default";
+      },
       addFile() {
         this.files.push({
           name: "新增数据",
           data: ""
         })
+        this.editing = "file";
+        this.fileId = this.files.length - 1;
       },
       editFile(key) {
         this.editing = "file";
@@ -580,12 +607,16 @@ XHR.GET('/config', function (config) {
         });
       },
       addRule() {
-        this.rules.push({"errMessage":"新的要求","conds":[{
-          "type":"contain",
-          "data":"",
-          "datatype": "custom",
-          "paramA":"dest",
-        }]})
+        this.rules.push({
+          "errMessage":"新的要求",
+          "act": "displayError",
+          "conds":[{
+            "type":"contain",
+            "data":"",
+            "datatype": "custom",
+            "paramA":"dest",
+          }]
+        })
       },
       getRULE(rule) {
         return RULES[rule.type]
@@ -601,7 +632,13 @@ XHR.GET('/config', function (config) {
         for (var i = 0; i < rs.length; i++) {
           var r = rs[i];
           var Res = r.valid(mmo);
-          this.cmpResult.push(Res)
+          if (Res.pass == false && r.act == "exit") {
+            Res.pass = "结束检测";
+            this.cmpResult.push(Res);
+            break;
+          }
+          this.cmpResult.push(Res);
+          
         }
       }
     }
