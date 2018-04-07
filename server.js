@@ -15,7 +15,7 @@ var server = app.listen(3000, function () {
   var host = server.address().address;
   var port = server.address().port;
 
-  console.log('Example app listening at http://%s:%s', host, port);
+  console.log('listening at http://%s:%s', host, port);
 });
 
 
@@ -29,10 +29,12 @@ function saveRules(packageObj) {
 
 
 app.get('/config', function(req, res) {
+  res.set('Access-Control-Allow-Origin', '*');
   res.sendFile(__dirname+'/var/config.json');
 })
 
 app.post('/config', function(req, res) {
+  res.set('Access-Control-Allow-Origin', '*');
   saveRules(req.body);
   res.send("1");
 })
