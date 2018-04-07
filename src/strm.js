@@ -1,4 +1,3 @@
-(function () {
 
 // 创建字典树
 function BuildTree(config) {
@@ -102,20 +101,6 @@ function highlightMatches(str, matches) {
   return dest;
 }
 
-function markMatches(str, matches) {
-  var dest = '';
-  var low = 0;
-  for (var i = 0; i < matches.length; i++) {
-    dest += str.substring(low, matches[i].begin);
-    for (var j = matches[i].begin; j < matches[i].end; j++) {
-      dest += '*';
-    }
-    low = matches[i].end;
-  }
-  dest += str.substring(low);
-  return dest;
-}
-
 function highlightMatchesRev(str, matches) {
   var dest = '';
   var low = 0;
@@ -126,6 +111,20 @@ function highlightMatchesRev(str, matches) {
     low = l - matches[i].begin;
   }
   dest += htmlencode(str.substring(low));
+  return dest;
+}
+
+function markMatches(str, matches, maxCount = 100000) {
+  var dest = '';
+  var low = 0;
+  for (var i = 0; i < matches.length && i < maxCount; i++) {
+    dest += str.substring(low, matches[i].begin);
+    for (var j = matches[i].begin; j < matches[i].end; j++) {
+      dest += '*';
+    }
+    low = matches[i].end;
+  }
+  dest += str.substring(low);
   return dest;
 }
 
@@ -146,7 +145,8 @@ var RULES = {
         srcRaw: cfg.src,
         destRaw: cfg.dest,
         src: BuildTreeByGroup(cfg.src),
-        dest: BuildTreeByGroup(cfg.dest)
+        dest: BuildTreeByGroup(cfg.dest),
+        regRules: cfg.regRules,
       };
     },
     valid: function (data, config, removeMatched, cond) {
@@ -182,6 +182,39 @@ var RULES = {
           })
         }
       }
+
+      for (var key in config.regRules) {
+        var regRule = config.regRules[key];
+
+        var matchA = [];
+        var matchB = [];
+        var t;
+
+        while(t = regRule.src.exec(a)) {
+          matchA.push({
+            begin: t.index,
+            end: t.index + t[0].length,
+            match: t[0]
+          })
+        }
+        while(t = regRule.dest.exec(b)) {
+          matchB.push({
+            begin: t.index,
+            end: t.index + t[0].length,
+            match: t[0]
+          })
+        }
+        matchesA[key] = matchA;
+        matchesB[key] = matchA;
+
+        if (matchA.length !== matchB.length) {
+          errors.push({
+            message: `${lang[cond.paramA]}中的（${regRule.src.source}）的数量与${lang[cond.paramB]}中的（${regRule.dest.source}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            srcDiff: highlightMatches(a, matchA),
+            destDiff: highlightMatches(b, matchB),
+          })
+        }
+      }
       
       if (removeMatched) {
         var replacedA = a;
@@ -191,6 +224,65 @@ var RULES = {
         }
         for (var key in matchesB) {
           replacedB = markMatches(replacedB, matchesB[key]);
+        }
+        replacedA = replacedA.replace(/\*/g, '');
+        replacedB = replacedB.replace(/\*/g, '');
+      }
+
+      
+      return {
+        pass: errors.length == 0,
+        errors: errors,
+        paramA: replacedA,
+        paramB: replacedB,
+        message: message
+      }
+    }
+  },
+  // 原文中有的A，译文中需要有对应B；但不要求译文中的B与原文的A对应（A数量<=B数量即可）
+  matchA2B: {
+    title: "原文对应译文",
+    paramA: true,
+    paramB: true,
+    initConfig: function (config) {
+      var cfg = parsePairFile(config);
+      return {
+        srcRaw: cfg.src,
+        destRaw: cfg.dest,
+        src: BuildTreeByGroup(cfg.src),
+        dest: BuildTreeByGroup(cfg.dest)
+      };
+    },
+    valid: function (data, config, removeMatched, cond) {
+      var a = data.paramA;
+      var b = data.paramB;
+      var matchesA = MatchTreeAllByGroup(config.src, a);
+      var matchesB = MatchTreeAllByGroup(config.dest, b);
+      var resA = '';
+      var resB = '';
+      var message = '';
+      var errors = [];
+
+      for (var key in matchesA) {
+        var matchA = matchesA[key] || [];
+        var matchB = matchesB[key] || [];
+        if (matchA.length > matchB.length) {
+          errors.push({
+            message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量小于${lang[cond.paramB]}中的（${config.destRaw[key]}）数量， = ${matchA.length}:${matchB.length}`,
+            srcDiff: highlightMatches(a, matchA),
+            destDiff: highlightMatches(b, matchB),
+          })
+        }
+      }
+      
+      if (removeMatched) {
+        var replacedA = a;
+        var replacedB = b;
+        for (var key in matchesA) {
+          replacedA = markMatches(replacedA, matchesA[key]);
+          if (matchesB[key]) {
+            replacedB = markMatches(replacedB, matchesB[key], matchesA[key].length);
+          }
         }
         replacedA = replacedA.replace(/\*/g, '');
         replacedB = replacedB.replace(/\*/g, '');
@@ -231,9 +323,19 @@ var RULES = {
           destDiff: highlightMatches(b, matches),
         }];
       }
+      
+      if (removeMatched) {
+        var replacedB = b;
+        for (var key in matches) {
+          replacedB = markMatches(replacedB, matches[key]);
+        }
+        replacedB = replacedB.replace(/\*/g, '');
+      }
+
       return {
         pass: matches.length == 0,
-        errors: errors
+        errors: errors,
+        paramB: replacedB,
       }
     }
   },
@@ -329,7 +431,49 @@ var RULES = {
         errors: errors
       }
     }
-  }
+  },
+  matchReg: {
+    title: "符合正则表达式",
+    paramA: true,
+    initConfig: function (config) {
+      var reg = new RegExp(config);
+      return {
+        reg: reg
+      }
+    },
+    valid: function (data, config, removeMatched, cond) {
+      var a = data.paramA;
+      var errors = [];
+      if (!a.match(config.reg)) {
+        errors.push(`${lang[cond.paramA]} 的内容`)
+      }
+      return {
+        pass: errors.length == 0,
+        errors: errors
+      }
+    }
+  },
+  notMatchReg: {
+    title: "不符合正则表达式",
+    paramA: true,
+    initConfig: function (config) {
+      var reg = new RegExp(config);
+      return {
+        reg: reg
+      }
+    },
+    valid: function (data, config, removeMatched, cond) {
+      var a = data.paramA;
+      var errors = [];
+      if (a.match(config.reg)) {
+        errors.push(`${lang[cond.paramA]} 的内容`)
+      }
+      return {
+        pass: errors.length == 0,
+        errors: errors
+      }
+    }
+  },
 }
 RULES.notEndWith = {
   title: "结尾不匹配",
@@ -344,6 +488,7 @@ function Rule(data, file) {
   this.errMessage = data.errMessage;
   this.removeMatched = data.removeMatched;
   this.act = data.act;
+  this.env = data.env;
   for (var key in data.conds) {
     var cond = data.conds[key];
     if (cond.datatype == "br") {
@@ -397,51 +542,64 @@ function parsePairFile(text) {
   var lines = text.split('\n');
   var res = {
     src: [],
-    dest: []
+    dest: [],
+    regRules: []
   }
   for (var key in lines) {
     var mean = lines[key].split('#')[0].trim();
     if (mean) {
-      var pair = mean.split('>>>');
-      if (pair.length < 2) {continue}
-      var src = pair[0].trim();
-      
-      src = src.split('__');
-      for (var i = 0; i < src.length; i++) {
-        var code = src[i].trim();
-        if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
-          code = code.substr(1, code.length-2);
+      if (mean.indexOf('>>>') !== -1) {
+        var pair = mean.split('>>>');
+        if (pair.length < 2) {continue}
+        var src = pair[0].trim();
+        
+        src = src.split('__');
+        for (var i = 0; i < src.length; i++) {
+          var code = src[i].trim();
+          if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
+            code = code.substr(1, code.length-2);
+          }
+          src[i] = code;
         }
-        src[i] = code;
-      }
-      res.src.push(src);
+        res.src.push(src);
 
-      var dest = pair[1].trim();
-      dest = dest.split('__')
-      for (var i = 0; i < dest.length; i++) {
-        var code = dest[i].trim();
-        if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
-          code = code.substr(1, code.length-2);
+        var dest = pair[1].trim();
+        dest = dest.split('__')
+        for (var i = 0; i < dest.length; i++) {
+          var code = dest[i].trim();
+          if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
+            code = code.substr(1, code.length-2);
+          }
+          dest[i] = code;
         }
-        dest[i] = code;
+        res.dest.push(dest);
+      } else if (mean.indexOf('>REG>') !== -1) {
+        var pair = mean.split('>REG>');
+        if (pair.length < 2) {continue}
+        var src = pair[0].trim();
+        var dest = pair[1].trim();
+        res.regRules.push({
+          src: new RegExp(src, 'g'),
+          dest: new RegExp(dest, 'g'),
+        })
       }
-      res.dest.push(dest);
     }
   }
   return res;
 }
 
 
-var rs = [
-]
+var rs = []
+
 function BuildRules(rulesConfig, files) {
   rs = [];
   for (var key in rulesConfig) {
     rs.push(new Rule(rulesConfig[key], files))
   }
+  runCallbacks();
 }
 
-function validData(ta, tb) {
+function validData(ta, tb, simple) {
   var mmo = {
     origin: ta,
     dest: tb
@@ -449,26 +607,49 @@ function validData(ta, tb) {
   var diffs = [];
   for (var i = 0; i < rs.length; i++) {
     var r = rs[i];
+    if (!(r.env === 'all' || exports.env === r.env)) {
+      continue;
+    }
     var res = r.valid(mmo);
     if (res.pass == false && r.act == "exit") {
       res.pass = "结束检测";
       diffs.push(res);
       break;
     }
+    if (res.pass == false && simple) {
+      return -1
+    }
     diffs.push(res);
   } 
-  return diffs;
-}
-
-if (typeof(window) !== "undefined") {
-  window.BuildRules = BuildRules;
-  window.validData = validData;
-  window.RULES = RULES;
-} else {
-  module.exports = {
-    BuildRules: BuildRules,
-    validData: validData,
+  if (simple) {
+    return 1;
+  } else {
+    return diffs;
   }
 }
 
-})();
+function runCallbacks() {
+  for (var i = 0; i < callbacks.length; i++) {
+    if (callbacks[i]) {
+      callbacks[i]();
+    }
+  }
+}
+
+var callbacks = [];
+function onRuleChange(callback) {
+  callbacks.push(callback);
+}
+
+var exports = {
+  env: 'all',
+  RULES,
+  BuildRules,
+  validData,
+  onRuleChange,
+  setEnv(env) {
+    exports.env = env;
+    runCallbacks();
+  }
+}
+module.exports = exports;

@@ -5,7 +5,7 @@ const fs = require('fs')
 const cookieParser = require('cookie-parser');
 const app = express();
 
-app.use(express.static('static'));
+app.use(express.static('dist'));
 app.use(bodyParser.text())
 app.use(bodyParser.urlencoded({ extended: false, limit:'50mb' }))
 app.use(cookieParser());
