@@ -1,9 +1,9 @@
 var http = require('http');
-var fse = require('fse');
+var fse = require('fs-extra');
 var packageConfig = require('./package.json');
 
 var host = host + "/";
-var host = "http://localhost.com:3000/";
+var host = "http://localhost:3000/";
 var path = "client/";
 
 function logInfo(type, msg) {
@@ -11,7 +11,8 @@ function logInfo(type, msg) {
 }
 
 function checkUpdate(cb) {
-  getHttpData(host + '/client/package.json', function (res) {
+  getHttpData(host + path + 'package.json', function (res) {
+    console.log(res);
     var data = JSON.parse(res);
     
     packageConfig.build = packageConfig.build || -1;
@@ -21,6 +22,8 @@ function checkUpdate(cb) {
     } else {
       logInfo('updateInfo', '最新版本');
     }
+  }, function() {
+    logInfo('updateInfo', '无法连接至更新服务器');
   })
 }
 
@@ -42,9 +45,9 @@ checkUpdate(function (data) {
     logInfo('updateInfo', '下载完成');
     var moveing = res.map((file, i) => {
       return new Promise((resolve, reject) =>{
-        fse.rename('./tmp/' + file, './' + file, () => {
+        //fse.rename('./tmp/' + file, './' + file, () => {
           resolve(file);
-        })
+        //})
       })
     })
     return Promise.all(moveing)
@@ -60,34 +63,40 @@ function getHttpData(filepath, success, error) {
   // 回调缺省时候的处理
   success = success || function () {};
   error = error || function () {};
-
   var url = filepath + '?r=' + Math.random();
 
-  http.get(url, function (res) {
-    var statusCode = res.statusCode;
+  try {
+    http.get(url, function (res) {
+      var statusCode = res.statusCode;
 
-    if (statusCode !== 200) {
-      // 出错回调
-      console.log(statusCode + filepath);
+      if (statusCode !== 200) {
+        // 出错回调
+        console.log(statusCode + filepath);
+        error();
+        // 消耗响应数据以释放内存
+        res.resume();
+        return;
+      }
+
+      res.setEncoding('utf8');
+      var rawData = '';
+      res.on('data', function (chunk) {
+        rawData += chunk;
+      });
+
+      // 请求结束
+      res.on('end', function () {
+        // 成功回调
+        success(rawData);
+      }).on('error', function (e) {
+        // 出错回调
+        error();
+      });
+    }).on('error', (e) => {
       error();
-      // 消耗响应数据以释放内存
-      res.resume();
-      return;
-    }
-
-    res.setEncoding('utf8');
-    var rawData = '';
-    res.on('data', function (chunk) {
-      rawData += chunk;
-    });
-
-    // 请求结束
-    res.on('end', function () {
-      // 成功回调
-      success(rawData);
-    }).on('error', function (e) {
-      // 出错回调
-      error();
-    });
-  });
+      console.error(`Got error: ${e.message}`);
+    });;
+  } catch(e) {
+    error();
+  }
 };

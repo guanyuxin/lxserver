@@ -20,7 +20,7 @@ opts.head = opts.head || 0;
 
 function checkDiff(rowOrigin, rowDest) {
   var errs = [];
-  rowDest.eachCell(function (cellDest, i) {
+  rowDest.eachCell({includeEmpty: true}, function (cellDest, i) {
     var cellOrigin = rowOrigin.getCell(i);
     if (cellOrigin.text !== cellDest.text) {
       if (i == opts.l2) {
@@ -71,8 +71,9 @@ function checkXsl (dataOrigin, dataDest, nm) {
       }
     }
   }
-  dataDest.getColumn(12).style = undefined;
-  dataDest.eachRow(function(rowDest, i) {
+  // var c = dataDest.getColumn(13);
+
+  dataDest.eachRow({includeEmpty: true}, function(rowDest, i) {
     var rowOrigin = dataOrigin.getRow(i);
 
     var diffErrs = checkDiff(rowOrigin, rowDest);
@@ -89,7 +90,9 @@ function checkXsl (dataOrigin, dataDest, nm) {
       rowDest.getCell(opts.l3 + 2).value = ("问题：\n" + diffErrs.map(data => data.msg).join(';\n'));
       for (var key in diffErrs) {
         var cellId = diffErrs[key].cellId;
-        rowDest.getCell(cellId + 1).fill = {
+        var cell = rowDest.getCell(cellId);
+        cell.style = Object.create(cell.style);
+        cell.fill = {
           type: 'pattern',
           pattern:'solid',
           fgColor:{argb:'FFFFaaaa'}
