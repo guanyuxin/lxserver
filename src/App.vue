@@ -31,7 +31,7 @@
 <script>
 import RuleEditor from './components/RuleEditor'
 import XHR from './xhr'
-import strm from './strm'
+import strm from '../client/libs/strm'
 import Xeditor from './components/Xeditor'
 import SingleTest from './components/SingleTest'
 import MutiTest from './components/MutiTest'
@@ -170,6 +170,9 @@ h5 {
   z-index: 20;
   color: #fff;
   background: #4b90e2;
+  border-left: 1px solid #aeaee6;
+  border-top: 1px solid #aeaee6;
+  border-bottom: 1px solid #aeaee6;
 }
 .fileArea {
   padding: 10px;

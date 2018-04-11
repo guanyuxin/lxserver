@@ -19,7 +19,7 @@
 </template>
 <script>
 import Xeditor from './Xeditor'
-import strm from '../strm'
+import strm from '../../client/libs/strm'
 export default {
   name: 'MutiTest',
   data () {
@@ -27,12 +27,22 @@ export default {
       tests: [
         {
           src: "哈哈哈哈",
-          dest: "広気況沖収効決乗",
+          dest: "広気況沖収効決乗巻",
           assume: 1,
           res: undefined
         },{
           src: "哈哈哈哈",
-          dest: "广气况冰冲收效决乘而并",
+          dest: "广气况冰冲收效决乘而并卷",
+          assume: -1,
+          res: undefined
+        },{
+          src: "︱",
+          dest: "｜",
+          assume: 1,
+          res: undefined
+        },{
+          src: "︱",
+          dest: "︱",
           assume: -1,
           res: undefined
         },{
@@ -118,6 +128,16 @@ export default {
         },{
           src: "<sub></sub><sup></sup>",
           dest: "＜ｓｕｂ＞＜／ｓｕｂ＞＜ｓｕｐ＞＜／ｓｕｐ＞",
+          assume: -1,
+          res: undefined
+        },{
+          src: "CO<sub>2</sub>",
+          dest: "ＣＯ<sub>２</sub>",
+          assume: 1,
+          res: undefined
+        },{
+          src: "CO<sub>2</sub>",
+          dest: "CO<sub>2</sub>",
           assume: -1,
           res: undefined
         },{

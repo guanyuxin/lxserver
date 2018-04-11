@@ -1,3 +1,53 @@
+// 将 k >>> v 解析
+function parsePairFile(text) {
+  var lines = text.split('\n');
+  var res = {
+    src: [],
+    dest: [],
+    regRules: []
+  }
+  for (var key in lines) {
+    var mean = lines[key].split('#')[0].trim();
+    if (mean) {
+      if (mean.indexOf('>>>') !== -1) {
+        var pair = mean.split('>>>');
+        if (pair.length < 2) {continue}
+        var src = pair[0].trim();
+        
+        src = src.split('__');
+        for (var i = 0; i < src.length; i++) {
+          var code = src[i].trim();
+          if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
+            code = code.substr(1, code.length-2);
+          }
+          src[i] = code;
+        }
+        res.src.push(src);
+
+        var dest = pair[1].trim();
+        dest = dest.split('__')
+        for (var i = 0; i < dest.length; i++) {
+          var code = dest[i].trim();
+          if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
+            code = code.substr(1, code.length-2);
+          }
+          dest[i] = code;
+        }
+        res.dest.push(dest);
+      } else if (mean.indexOf('>REG>') !== -1) {
+        var pair = mean.split('>REG>');
+        if (pair.length < 2) {continue}
+        var src = pair[0].trim();
+        var dest = pair[1].trim();
+        res.regRules.push({
+          src: new RegExp(src, 'g'),
+          dest: new RegExp(dest, 'g'),
+        })
+      }
+    }
+  }
+  return res;
+}
 
 // 创建字典树
 function BuildTree(config) {
@@ -84,6 +134,7 @@ function MatchTreeAllByGroup(tree, str) {
 }
 
 function htmlencode(s) {
+  if (typeof(document) === "undefined") {return s}
   var div = document.createElement('div');  
   div.appendChild(document.createTextNode(s));  
   return div.innerHTML;  
@@ -139,8 +190,8 @@ var RULES = {
     title: "一一对应",
     paramA: true,
     paramB: true,
-    initConfig: function (config) {
-      var cfg = parsePairFile(config);
+    initRule: function (ruleText) {
+      var cfg = parsePairFile(ruleText);
       return {
         srcRaw: cfg.src,
         destRaw: cfg.dest,
@@ -149,11 +200,11 @@ var RULES = {
         regRules: cfg.regRules,
       };
     },
-    valid: function (data, config, removeMatched, cond) {
+    valid: function (data, rule, removeMatched, cond) {
       var a = data.paramA;
       var b = data.paramB;
-      var matchesA = MatchTreeAllByGroup(config.src, a);
-      var matchesB = MatchTreeAllByGroup(config.dest, b);
+      var matchesA = MatchTreeAllByGroup(rule.src, a);
+      var matchesB = MatchTreeAllByGroup(rule.dest, b);
       var resA = '';
       var resB = '';
       var message = '';
@@ -164,7 +215,8 @@ var RULES = {
         var matchB = matchesB[key] || [];
         if (matchA.length !== matchB.length) {
           errors.push({
-            message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${config.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            messageShort: `${rule.srcRaw[key]}:${rule.destRaw[key]} = ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -176,15 +228,16 @@ var RULES = {
         var matchB = matchesB[key] || [];
         if (matchA.length == 0 && matchB.length !== 0) {
           errors.push({
-            message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${config.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            messageShort: `${rule.srcRaw[key]}:${rule.destRaw[key]} = ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
         }
       }
 
-      for (var key in config.regRules) {
-        var regRule = config.regRules[key];
+      for (var key in rule.regRules) {
+        var regRule = rule.regRules[key];
 
         var matchA = [];
         var matchB = [];
@@ -210,6 +263,7 @@ var RULES = {
         if (matchA.length !== matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${regRule.src.source}）的数量与${lang[cond.paramB]}中的（${regRule.dest.source}）数量不匹配， = ${matchA.length}:${matchB.length}`,
+            messageShort: `${regRule.src.source}:${regRule.dest.source} = ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -244,7 +298,7 @@ var RULES = {
     title: "原文对应译文",
     paramA: true,
     paramB: true,
-    initConfig: function (config) {
+    initRule: function (config) {
       var cfg = parsePairFile(config);
       return {
         srcRaw: cfg.src,
@@ -269,6 +323,7 @@ var RULES = {
         if (matchA.length > matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量小于${lang[cond.paramB]}中的（${config.destRaw[key]}）数量， = ${matchA.length}:${matchB.length}`,
+            messageShort: `${config.srcRaw[key]}:${config.destRaw[key]} = ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -302,7 +357,7 @@ var RULES = {
   contain: {
     title: "不包含",
     paramA: true,
-    initConfig: function (config) {
+    initRule: function (config) {
       config = config.split(/[\n]/)
       return BuildTree(config);
     },
@@ -320,6 +375,7 @@ var RULES = {
       if (matches.length) {
         var errors = [{
           message: lang[cond.paramA] + `不能包含${matches.map(data=>data.match).join(',')}`,
+          messageShort: `${matches.map(data => data.match).join(' ')}`,
           destDiff: highlightMatches(b, matches),
         }];
       }
@@ -343,7 +399,7 @@ var RULES = {
   onlyContain: {
     title: "只包含",
     paramA: true,
-    initConfig: function (config) {
+    initRule: function (config) {
       config = config.split(/[\n,]/)
       return BuildTree(config);
     },
@@ -366,6 +422,7 @@ var RULES = {
       if (matches.length) {
         var errors = [{
           message: `${lang[cond.paramA]}中例外的字符${matches.map(data=>data.match).join(',')}`,
+          messageShort: `${matches.map(data => data.match).join(' ')}`,
           destDiff: highlightMatches(b, matches),
         }];
       }
@@ -380,7 +437,7 @@ var RULES = {
   endWith: {
     title: "结尾匹配",
     paramA: true,
-    initConfig: function (config) {
+    initRule: function (config) {
       return BuildTree(config.split('').reverse().join('').split(/[\n,]/))
     },
     valid: function (data, config, removeMatched, cond) {
@@ -392,11 +449,13 @@ var RULES = {
       if (res) {
         matches.push({
           message: `${lang[cond.paramA]}结尾包含了` + res.match.split('').reverse().join(''),
+          messageShort: `${res.match.split('').reverse().join('')}`,
           srcDiff: highlightMatchesRev(data.paramA, [res])
         })
       } else {
         errors.push({
-          message: `${lang[cond.paramA]}没有结尾要求内容`
+          message: `${lang[cond.paramA]}没有结尾要求内容`,
+          messageShort: ``,
         })
       }
       return {
@@ -410,7 +469,7 @@ var RULES = {
   startWith: {
     title: "开头不匹配",
     paramA: true,
-    initConfig: function (config) {
+    initRule: function (config) {
       config = config.split('\n')
       return BuildTree(config);
     },
@@ -423,7 +482,8 @@ var RULES = {
         matches.push(res);
       }
       var errors = [{
-        message: `不能包含${matches.map(data=>data.match).join(',')}`,
+        message: `不能以${matches.map(data=>data.match).join(',')}开头`,
+        messageShort: `${matches.map(data=>data.match).join(' ')}`,
         destDiff: highlightMatches(b, matches),
       }];
       return {
@@ -435,7 +495,7 @@ var RULES = {
   matchReg: {
     title: "符合正则表达式",
     paramA: true,
-    initConfig: function (config) {
+    initRule: function (config) {
       var reg = new RegExp(config);
       return {
         reg: reg
@@ -456,7 +516,7 @@ var RULES = {
   notMatchReg: {
     title: "不符合正则表达式",
     paramA: true,
-    initConfig: function (config) {
+    initRule: function (config) {
       var reg = new RegExp(config);
       return {
         reg: reg
@@ -479,7 +539,7 @@ RULES.notEndWith = {
   title: "结尾不匹配",
   invert: true,
   paramA: true,
-  initConfig: RULES.endWith.initConfig,
+  initRule: RULES.endWith.initRule,
   valid: RULES.endWith.valid,
 }
 
@@ -498,9 +558,9 @@ function Rule(data, file) {
     } else if (cond.datatype == "empty") {
       var parsed = ''
     } else if (cond.datatype == "custom") {
-      var parsed = RULES[cond.type].initConfig.call(cond, cond.data);
+      var parsed = RULES[cond.type].initRule.call(cond, cond.data);
     } else {
-      var parsed = RULES[cond.type].initConfig.call(cond, file[cond.datatype].data);
+      var parsed = RULES[cond.type].initRule.call(cond, file[cond.datatype].data);
     }
     this.conds.push({
       cond: cond,
@@ -537,62 +597,11 @@ Rule.prototype.valid = function(line) {
   return lastTest
 }
 
-
-function parsePairFile(text) {
-  var lines = text.split('\n');
-  var res = {
-    src: [],
-    dest: [],
-    regRules: []
-  }
-  for (var key in lines) {
-    var mean = lines[key].split('#')[0].trim();
-    if (mean) {
-      if (mean.indexOf('>>>') !== -1) {
-        var pair = mean.split('>>>');
-        if (pair.length < 2) {continue}
-        var src = pair[0].trim();
-        
-        src = src.split('__');
-        for (var i = 0; i < src.length; i++) {
-          var code = src[i].trim();
-          if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
-            code = code.substr(1, code.length-2);
-          }
-          src[i] = code;
-        }
-        res.src.push(src);
-
-        var dest = pair[1].trim();
-        dest = dest.split('__')
-        for (var i = 0; i < dest.length; i++) {
-          var code = dest[i].trim();
-          if (code.charAt(0) == '"' && code.charAt(code.length-1) == '"') {
-            code = code.substr(1, code.length-2);
-          }
-          dest[i] = code;
-        }
-        res.dest.push(dest);
-      } else if (mean.indexOf('>REG>') !== -1) {
-        var pair = mean.split('>REG>');
-        if (pair.length < 2) {continue}
-        var src = pair[0].trim();
-        var dest = pair[1].trim();
-        res.regRules.push({
-          src: new RegExp(src, 'g'),
-          dest: new RegExp(dest, 'g'),
-        })
-      }
-    }
-  }
-  return res;
-}
-
-
 var rs = []
 
-function BuildRules(rulesConfig, files) {
+function BuildRules(rulesConfig, files, globalConfig) {
   rs = [];
+  globalConfig = globalConfig
   for (var key in rulesConfig) {
     rs.push(new Rule(rulesConfig[key], files))
   }
@@ -640,7 +649,7 @@ var callbacks = [];
 function onRuleChange(callback) {
   callbacks.push(callback);
 }
-
+var globalConfig = {}
 var exports = {
   env: 'all',
   RULES,
