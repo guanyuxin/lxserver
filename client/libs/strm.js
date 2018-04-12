@@ -7,7 +7,10 @@ function parsePairFile(text) {
     regRules: []
   }
   for (var key in lines) {
-    var mean = lines[key].split('#')[0].trim();
+    var [mean, comment=""] = lines[key].split('#');
+    mean = mean.trim();
+    comment = comment.trim();
+
     if (mean) {
       if (mean.indexOf('>>>') !== -1) {
         var pair = mean.split('>>>');
@@ -42,6 +45,7 @@ function parsePairFile(text) {
         res.regRules.push({
           src: new RegExp(src, 'g'),
           dest: new RegExp(dest, 'g'),
+          comment: comment
         })
       }
     }
@@ -216,7 +220,7 @@ var RULES = {
         if (matchA.length !== matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
-            messageShort: `【${rule.srcRaw[key][0]}】:${matchA.length}:${matchB.length}`,
+            messageShort: `【${rule.srcRaw[key][0]}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -229,7 +233,7 @@ var RULES = {
         if (matchA.length == 0 && matchB.length !== 0) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
-            messageShort: `【${rule.srcRaw[key][0]}】:${matchA.length}:${matchB.length}`,
+            messageShort: `【${rule.srcRaw[key][0]}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -258,12 +262,12 @@ var RULES = {
           })
         }
         matchesA[key] = matchA;
-        matchesB[key] = matchA;
+        matchesB[key] = matchB;
 
         if (matchA.length !== matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${regRule.src.source}）的数量与${lang[cond.paramB]}中的（${regRule.dest.source}）数量不匹配， = ${matchA.length}:${matchB.length}`,
-            messageShort: `【${regRule.src.source}】:${matchA.length}:${matchB.length}`,
+            messageShort: `【${regRule.comment || regRule.src.source}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -323,7 +327,7 @@ var RULES = {
         if (matchA.length > matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量小于${lang[cond.paramB]}中的（${config.destRaw[key]}）数量， = ${matchA.length}:${matchB.length}`,
-            messageShort: `【${config.srcRaw[key][0]}】:${matchA.length}:${matchB.length}`,
+            messageShort: `【${config.srcRaw[key][0]}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -375,7 +379,7 @@ var RULES = {
       if (matches.length) {
         var errors = [{
           message: lang[cond.paramA] + `不能包含${matches.map(data=>data.match).join(',')}`,
-          messageShort: `${matches.map(data => '【' + data.match + '】-' + (data.begin+1)).join(' ')}`,
+          messageShort: `${matches.map(data => '【' + data.match + '】(第' + (data.begin+1) + ")").join(' ')}`,
           destDiff: highlightMatches(b, matches),
         }];
       }
@@ -422,7 +426,7 @@ var RULES = {
       if (matches.length) {
         var errors = [{
           message: `${lang[cond.paramA]}中例外的字符${matches.map(data=>data.match).join(',')}`,
-          messageShort: `${matches.map(data => '【' + data.match + '】-' + (data.begin+1)).join(' ')}`,
+          messageShort: `${matches.map(data => '【' + data.match + '】(第' + (data.begin+1) + ")").join(' ')}`,
           destDiff: highlightMatches(b, matches),
         }];
       }

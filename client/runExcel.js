@@ -3,6 +3,19 @@ var strm = require('./libs/strm.js');
 var config = require('./libs/config.json');
 var Excel = require('exceljs');
 
+// remind 修改了excelsjs
+// /exceljs/dist/es5/xlsx/xform/sheet/cell-xform.js
+
+/**
+case 'str':
+  model.type = Enums.ValueType.String;
+  //model.value = utils.xmlDecode(model.value);
+  model.value = (model.value);
+  break;
+
+**/
+
+
 strm.BuildRules(config.rules, config.files, {
   env: "xsl"
 });
@@ -54,6 +67,7 @@ function checkDiff(rowOrigin, rowDest) {
   rowDest.eachCell({includeEmpty: true}, function (cellDest, i) {
     var cellOrigin = rowOrigin.getCell(i);
     if (cellOrigin.text !== cellDest.text) {
+
       if (i == fileConfig.l2) {
         if (cellOrigin.text) {
           errs.push({
@@ -62,6 +76,7 @@ function checkDiff(rowOrigin, rowDest) {
           })
         }
       } else {
+        debugger;
         errs.push({
           cellId: i,
           msg: "第" + (i) + "列内容有修改\n" + cellOrigin.text + '\n' + cellDest.text+"\n"
@@ -93,7 +108,7 @@ function checkTranslate(rowDest) {
 
 function checkXsl (dataOrigin, dataDest, nm) {
   function err (line, msgs) {
-    if (!Array.isArray(msgs) || msgs.length == 1) {
+    if (!Array.isArray(msgs)) {
       console.log(nm + "错误：第" + line + "行：" + (msgs.msg ? msgs.msg : msgs))
     } else {
       console.log(nm + "错误：第" + line + "行：");
@@ -173,6 +188,7 @@ function checkDestFiles(origins) {
           
           var originBook = new Excel.Workbook();
           var destBook = new Excel.Workbook();
+            debugger;
           Promise.all([
             fileConfig.checkDiff ? originBook.xlsx.readFile("./原稿/" + nm) : Promise.resolve(0),
             destBook.xlsx.readFile("./译稿/" + nm)
