@@ -216,7 +216,7 @@ var RULES = {
         if (matchA.length !== matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
-            messageShort: `${rule.srcRaw[key]}:${rule.destRaw[key]} = ${matchA.length}:${matchB.length}`,
+            messageShort: `${rule.srcRaw[key][0]}--${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -229,7 +229,7 @@ var RULES = {
         if (matchA.length == 0 && matchB.length !== 0) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
-            messageShort: `${rule.srcRaw[key]}:${rule.destRaw[key]} = ${matchA.length}:${matchB.length}`,
+            messageShort: `${rule.srcRaw[key][0]}--${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -263,7 +263,7 @@ var RULES = {
         if (matchA.length !== matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${regRule.src.source}）的数量与${lang[cond.paramB]}中的（${regRule.dest.source}）数量不匹配， = ${matchA.length}:${matchB.length}`,
-            messageShort: `${regRule.src.source}:${regRule.dest.source} = ${matchA.length}:${matchB.length}`,
+            messageShort: `${regRule.src.source}--${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })
@@ -323,7 +323,7 @@ var RULES = {
         if (matchA.length > matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量小于${lang[cond.paramB]}中的（${config.destRaw[key]}）数量， = ${matchA.length}:${matchB.length}`,
-            messageShort: `${config.srcRaw[key]}:${config.destRaw[key]} = ${matchA.length}:${matchB.length}`,
+            messageShort: `${config.srcRaw[key][0]}:${config.destRaw[key][0]} = ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
           })

@@ -1,6 +1,6 @@
 var fs = require('fs');
 var strm = require('./libs/strm.js');
-var config = require('../var/config.json');
+var config = require('./libs/config.json');
 var Excel = require('exceljs');
 
 strm.BuildRules(config.rules, config.files, {
@@ -131,8 +131,7 @@ fs.readdir("./原稿", function (err, filesOrigin) {
       console.log("译稿读取错误：" + err);
       return;
     }
-    for (var i = 0; i < filesDest.length; i++) {
-      var nm = filesDest[i];
+    filesDest.forEach(function(nm, i) {
       if (nm.match(/\.xlsx$/)) {
         if (origins[nm]) {
           console.log("开始检测：" + nm)
@@ -154,6 +153,6 @@ fs.readdir("./原稿", function (err, filesOrigin) {
           console.log("忽略：" + nm + "找不到对应的原稿")
         }
       }
-    }
+    })
   });
 });

@@ -1,9 +1,10 @@
 var http = require('http');
 var fse = require('fs-extra');
 var packageConfig = require('./package.json');
+var versionVar = require('./libs/version.json');
 
-var host = host + "/";
-var host = "http://localhost:3000/";
+var host = "http://guanyuixn.com:3000/";
+//var host = "http://localhost:3000/";
 var path = "client/";
 
 function logInfo(type, msg) {
@@ -11,8 +12,24 @@ function logInfo(type, msg) {
 }
 
 function checkUpdate(cb) {
+  getHttpData(host + 'configVersion', function (res) {
+    var v = parseInt(res);
+    if (v > versionVar.version) {
+      logInfo('updateInfo', '更新规则');
+      getHttpData(host + 'config.json', function (res) {
+        try {
+          var d = JSON.parse(res);
+          fse.outputFile('./libs/config.json', res)
+          logInfo('updateInfo', '规则更新完毕');
+        } catch(e) {
+          logInfo('updateInfo', '规则更新异常');
+        }
+      });
+    }
+  }, function() {
+    logInfo('updateInfo', '无法连接至配置服务器');
+  });
   getHttpData(host + path + 'package.json', function (res) {
-    console.log(res);
     var data = JSON.parse(res);
     
     packageConfig.build = packageConfig.build || -1;
