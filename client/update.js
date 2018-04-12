@@ -45,9 +45,9 @@ checkUpdate(function (data) {
     logInfo('updateInfo', '下载完成');
     var moveing = res.map((file, i) => {
       return new Promise((resolve, reject) =>{
-        //fse.rename('./tmp/' + file, './' + file, () => {
+        fse.rename('./tmp/' + file, './' + file, () => {
           resolve(file);
-        //})
+        })
       })
     })
     return Promise.all(moveing)

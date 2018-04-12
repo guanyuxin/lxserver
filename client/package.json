@@ -5,6 +5,8 @@
   "files": [
     "ruleExcel.js",
     "update.js",
+    "P-all.bat",
+    "update.bat",
     "libs/strm.js",
     "package.json"
   ],
