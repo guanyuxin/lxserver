@@ -48,6 +48,11 @@ app.get('/updateAndRestartServer', function(req, res) {
   });
 })
 
+app.get('/alive', function(req, res) {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.send('alive')
+})
+
 app.get('/config', function(req, res) {
   res.set('Access-Control-Allow-Origin', '*');
   res.sendFile(__dirname+'/var/config.json');
