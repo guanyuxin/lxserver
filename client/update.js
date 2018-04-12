@@ -16,7 +16,7 @@ function checkUpdate(cb) {
     var v = parseInt(res);
     if (v > versionVar.version) {
       logInfo('updateInfo', '更新规则');
-      getHttpData(host + 'config.json', function (res) {
+      getHttpData(host + 'config', function (res) {
         try {
           var d = JSON.parse(res);
           fse.outputFile('./libs/config.json', res)
@@ -30,14 +30,14 @@ function checkUpdate(cb) {
       });
     }
   }, function() {
-    logInfo('updateInfo', '无法连接至配置服务器');
+    logInfo('updateInfo', '无法连接至配置服务器，继续');
   });
   getHttpData(host + path + 'package.json', function (res) {
     var data = JSON.parse(res);
     
     packageConfig.build = packageConfig.build || -1;
     if (packageConfig.build <= data.build) {
-      logInfo('updateInfo', '检测到更新');
+      logInfo('updateInfo', '检测到更新，开始更新......');
       cb && cb(data);
     } else {
       logInfo('updateInfo', '最新版本');
@@ -70,10 +70,10 @@ checkUpdate(function (data) {
       })
     })
     return Promise.all(moveing).then(() => {
-      logInfo('updateInfo', '更新完毕');
+      logInfo('updateInfo', '更新完毕，继续...');
     })
   }, () => {
-    logInfo('updateInfo', '更新失败');
+    logInfo('updateInfo', '更新失败，继续...');
   })
 });
 
@@ -113,7 +113,6 @@ function getHttpData(filepath, success, error) {
       });
     }).on('error', (e) => {
       error();
-      console.error(`Got error: ${e.message}`);
     });;
   } catch(e) {
     error();

@@ -37,6 +37,17 @@ function saveRules(packageObj) {
 }
 
 
+app.get('/updateAndRestartServer', function(req, res) {
+  require('child_process').execFile(__dirname + '/plus.sh', [], {
+  }, (error, stdout, stderr) => {
+    if (error) {
+      res.send(error + '\n' + stderr)
+    } else {
+      res.send(stdout);
+    }
+  });
+})
+
 app.get('/config', function(req, res) {
   res.set('Access-Control-Allow-Origin', '*');
   res.sendFile(__dirname+'/var/config.json');
