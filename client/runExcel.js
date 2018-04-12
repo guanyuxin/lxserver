@@ -7,6 +7,36 @@ strm.BuildRules(config.rules, config.files, {
   env: "xsl"
 });
 
+var CONFIGS = {
+  "P-all": {
+    l1: 10,
+    l2: 13,
+    l3: 13,
+    head: 1,
+    checkDiff: false
+  },
+  "IP-all": {
+    l1: 11,
+    l2: 13,
+    l3: 13,
+    head: 0,
+    checkDiff: true
+  },
+  "P-sum": {
+    l1: 10,
+    l2: 13,
+    l3: 13,
+    head: 1,
+    checkDiff: false
+  },
+  "IP-sum": {
+    l1: 10,
+    l2: 13,
+    l3: 13,
+    head: 0,
+    checkDiff: true
+  }
+}
 
 var opts = {};
 for (var key of process.argv.splice(2)) {
@@ -17,13 +47,14 @@ for (var key of process.argv.splice(2)) {
   } 
 }
 opts.head = opts.head || 0;
+var fileConfig = CONFIGS[opts.group];
 
 function checkDiff(rowOrigin, rowDest) {
   var errs = [];
   rowDest.eachCell({includeEmpty: true}, function (cellDest, i) {
     var cellOrigin = rowOrigin.getCell(i);
     if (cellOrigin.text !== cellDest.text) {
-      if (i == opts.l2) {
+      if (i == fileConfig.l2) {
         if (cellOrigin.text) {
           errs.push({
             cellId: i,
@@ -33,7 +64,7 @@ function checkDiff(rowOrigin, rowDest) {
       } else {
         errs.push({
           cellId: i,
-          msg: "第" + (i) + "列内容有修改"
+          msg: "第" + (i) + "列内容有修改\n" + cellOrigin.text + '\n' + cellDest.text+"\n"
         })
       }
     }
@@ -43,8 +74,8 @@ function checkDiff(rowOrigin, rowDest) {
 
 function checkTranslate(rowDest) {
   var errs = [];
-  var src = rowDest.getCell(opts.l1); src = src ? src.text : ""
-  var dest = rowDest.getCell(opts.l2); dest = dest ? dest.text : ""
+  var src = rowDest.getCell(fileConfig.l1); src = src ? src.text : ""
+  var dest = rowDest.getCell(fileConfig.l2); dest = dest ? dest.text : ""
   var res = strm.validData(src, dest);
   for (var i = 0; i < res.length; i++) {
     if (!res[i].pass) {
@@ -71,61 +102,65 @@ function checkXsl (dataOrigin, dataDest, nm) {
       }
     }
   }
-  // var c = dataDest.getColumn(13);
 
   dataDest.eachRow({includeEmpty: true}, function(rowDest, i) {
-    var rowOrigin = dataOrigin.getRow(i);
-
-    var diffErrs = checkDiff(rowOrigin, rowDest);
+    var skip = false;
+    //不检测表头
+    if (fileConfig.head && i < fileConfig.head) {
+      skip = true;
+    }
+    if (skip) {return}
+    // 检验原稿与译稿区别
+    if (fileConfig.checkDiff) {
+      var rowOrigin = dataOrigin.getRow(i);
+      var diffErrs = checkDiff(rowOrigin, rowDest);
+      if (diffErrs.length) {
+        rowDest.getCell(fileConfig.l3 + 2).value = ("问题：\n" + diffErrs.map(data => data.msg).join(';\n'));
+        for (var key in diffErrs) {
+          var cellId = diffErrs[key].cellId;
+          var cell = rowDest.getCell(cellId);
+          cell.style = Object.create(cell.style);
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: {argb:'FFFFaaaa'}
+          };
+        }
+        err(i, diffErrs);
+      } else {
+        rowDest.getCell(fileConfig.l3 + 2).value = (" ");
+      }
+      // 原稿已经存在译文则不进行校验
+      if (rowOrigin.getCell(fileConfig.l2).text) {
+        skip = true; 
+      }
+    }
+    // 检验译文是否对应原文
+    if (skip) {return}
     var resErrs = checkTranslate(rowDest);
-
     if (resErrs.length) {
-      rowDest.getCell(opts.l3 + 1).value = ("问题：\n" + resErrs.join(';\n'));
+      rowDest.getCell(fileConfig.l3 + 1).value = ("问题：\n" + resErrs.join(';\n'));
       err(i, resErrs);
     } else {
-      rowDest.getCell(opts.l3 + 1).value = (" ");
+      rowDest.getCell(fileConfig.l3 + 1).value = (" ");
     }
 
-    if (diffErrs.length) {
-      rowDest.getCell(opts.l3 + 2).value = ("问题：\n" + diffErrs.map(data => data.msg).join(';\n'));
-      for (var key in diffErrs) {
-        var cellId = diffErrs[key].cellId;
-        var cell = rowDest.getCell(cellId);
-        cell.style = Object.create(cell.style);
-        cell.fill = {
-          type: 'pattern',
-          pattern:'solid',
-          fgColor:{argb:'FFFFaaaa'}
-        };
-      }
-      err(i, diffErrs);
-    } else {
-      rowDest.getCell(opts.l3 + 2).value = (" ");
-    }
   
   })
 
-  if (dataOrigin.rowCount > dataDest.rowCount) {
-    err(dataOrigin.rowCount, "译稿缺少行")
-    dataDest.addRow(["错误：译稿缺少行"]);
+  // 检验原稿与译稿区别
+  if (fileConfig.checkDiff) {
+    if (dataOrigin.rowCount > dataDest.rowCount) {
+      err(dataOrigin.rowCount, "译稿缺少行")
+      dataDest.addRow(["错误：译稿缺少行"]);
+    }
   }
 
 }
 
 
 ///////////
-fs.readdir("./原稿", function (err, filesOrigin) {
-  if (err) {
-      console.log("原稿读取错误：" + err);
-      return;
-  }
-  var origins = {};
-  for (var i = 0; i < filesOrigin.length; i++) {
-    if (filesOrigin[i].match(/\.xlsx$/)) {
-      origins[filesOrigin[i]] = true;
-    }
-  }
-
+function checkDestFiles(origins) {
   fs.readdir("./译稿", function (err, filesDest) {
     if (err) {
       console.log("译稿读取错误：" + err);
@@ -133,13 +168,13 @@ fs.readdir("./原稿", function (err, filesOrigin) {
     }
     filesDest.forEach(function(nm, i) {
       if (nm.match(/\.xlsx$/)) {
-        if (origins[nm]) {
+        if (!fileConfig.checkDiff || origins[nm]) {
           console.log("开始检测：" + nm)
           
           var originBook = new Excel.Workbook();
           var destBook = new Excel.Workbook();
           Promise.all([
-            originBook.xlsx.readFile("./原稿/" + nm),
+            fileConfig.checkDiff ? originBook.xlsx.readFile("./原稿/" + nm) : Promise.resolve(0),
             destBook.xlsx.readFile("./译稿/" + nm)
           ]).then(function () {
             checkXsl(originBook.worksheets[0],destBook.worksheets[0], nm);
@@ -155,4 +190,22 @@ fs.readdir("./原稿", function (err, filesOrigin) {
       }
     })
   });
-});
+}
+
+if (fileConfig.checkDiff) {
+  fs.readdir("./原稿", function (err, filesOrigin) {
+    if (err) {
+        console.log("原稿读取错误：" + err);
+        return;
+    }
+    var origins = {};
+    for (var i = 0; i < filesOrigin.length; i++) {
+      if (filesOrigin[i].match(/\.xlsx$/)) {
+        origins[filesOrigin[i]] = true;
+      }
+    }
+    checkDestFiles(origins)
+  });
+} else {
+  checkDestFiles()
+}

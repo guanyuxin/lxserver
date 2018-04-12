@@ -1,9 +1,9 @@
 {
   "name": "excel",
   "version": "0.0.1",
-  "build": 2,
+  "build": 3,
   "files": [
-    "ruleExcel.js",
+    "runExcel.js",
     "update.js",
     "P-all.bat",
     "update.bat",

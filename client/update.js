@@ -3,7 +3,7 @@ var fse = require('fs-extra');
 var packageConfig = require('./package.json');
 var versionVar = require('./libs/version.json');
 
-var host = "http://guanyuixn.com:3000/";
+var host = "http://guanyuxin.com:3000/";
 //var host = "http://localhost:3000/";
 var path = "client/";
 
@@ -20,6 +20,9 @@ function checkUpdate(cb) {
         try {
           var d = JSON.parse(res);
           fse.outputFile('./libs/config.json', res)
+          fse.outputFile('./libs/version.json', JSON.stringify({
+            version: v
+          }))
           logInfo('updateInfo', '规则更新完毕');
         } catch(e) {
           logInfo('updateInfo', '规则更新异常');
@@ -48,7 +51,6 @@ checkUpdate(function (data) {
   var updateing = data.files.map(function(file, i) {
     return new Promise(function (resolve, reject) {
       getHttpData(host + path + file, function (res) {
-        console.log('downloaded' + file);
         fse.outputFile('./tmp/' + file, res, function () {
           logInfo('updateInfo', '下载' + file);
           resolve(file);
@@ -67,11 +69,11 @@ checkUpdate(function (data) {
         })
       })
     })
-    return Promise.all(moveing)
+    return Promise.all(moveing).then(() => {
+      logInfo('updateInfo', '更新完毕');
+    })
   }, () => {
     logInfo('updateInfo', '更新失败');
-  }).then(()=>{
-    logInfo('updateInfo', '更新完毕');
   })
 });
 
