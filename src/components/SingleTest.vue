@@ -30,7 +30,7 @@
 </template>
 <script>
 import Xeditor from './Xeditor'
-import strm from '../../client/libs/strm'
+import strm from '../strm.js'
 export default {
   name: 'SingleTest',
   data () {

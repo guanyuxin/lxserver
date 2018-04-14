@@ -6,6 +6,11 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 app.use(express.static('dist'));
+app.use('/client', function(req, res, next) {
+  req.path = decodeURIComponent(req.path)
+  console.log(req.path)
+  next();
+});
 app.use('/client', express.static('client'));
 app.use(bodyParser.text())
 app.use(bodyParser.urlencoded({ extended: false, limit:'50mb' }))

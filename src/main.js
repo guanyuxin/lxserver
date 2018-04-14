@@ -2,7 +2,7 @@
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
 import App from './App'
-import strm from '../client/libs/strm'
+import strm from './strm'
 import Vuex from 'vuex'
 import XHR from './xhr'
 
@@ -57,7 +57,7 @@ XHR.GET('//'+location.hostname+':3000/config', (config) => {
 })
 
 
-Vue.prototype.ENVS = ['P-上', 'P-下', 'IP-上', 'IP-下'];
+Vue.prototype.ENVS = ['P-all', 'P-sum', 'IP-all', 'IP-sum'];
 Vue.prototype.RULES = strm.RULES;
 
 

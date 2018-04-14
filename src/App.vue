@@ -31,7 +31,7 @@
 <script>
 import RuleEditor from './components/RuleEditor'
 import XHR from './xhr'
-import strm from '../client/libs/strm'
+import strm from './strm'
 import Xeditor from './components/Xeditor'
 import SingleTest from './components/SingleTest'
 import MutiTest from './components/MutiTest'

@@ -1,7 +1,7 @@
 var http = require('http');
 var fse = require('fs-extra');
 var packageConfig = require('./package.json');
-var versionVar = require('./libs/version.json');
+var versionVar = require('./version.json');
 
 var host = "http://guanyuxin.com:3000/";
 //var host = "http://localhost:3000/";
@@ -30,14 +30,14 @@ function checkUpdate(cb) {
       });
     }
   }, function() {
-    logInfo('updateInfo', '无法连接至配置服务器，继续');
+    logInfo('updateInfo', '无法连接至配置服务器');
   });
   getHttpData(host + path + 'package.json', function (res) {
     var data = JSON.parse(res);
     
     packageConfig.build = packageConfig.build || -1;
-    if (packageConfig.build <= data.build) {
-      logInfo('updateInfo', '检测到更新，开始更新......');
+    if (packageConfig.build < data.build) {
+      logInfo('updateInfo', '检测到更新');
       cb && cb(data);
     } else {
       logInfo('updateInfo', '最新版本');
@@ -55,8 +55,9 @@ checkUpdate(function (data) {
           logInfo('updateInfo', '下载' + file);
           resolve(file);
         });
-      }, () => {
-        reject();
+      }, (e) => {
+        console.log(file + "下载失败");
+        reject(e);
       });
     });
   });
@@ -70,20 +71,19 @@ checkUpdate(function (data) {
       })
     })
     return Promise.all(moveing).then(() => {
-      logInfo('updateInfo', '更新完毕，继续...');
+      logInfo('updateInfo', '更新完毕');
     })
-  }, () => {
-    logInfo('updateInfo', '更新失败，继续...');
+  }, (e) => {
+    logInfo('updateInfo', '更新失败' + e.message);
   })
 });
-
 
 function getHttpData(filepath, success, error) {
   // 回调缺省时候的处理
   success = success || function () {};
   error = error || function () {};
   var url = filepath + '?r=' + Math.random();
-
+  console.log(url);
   try {
     http.get(url, function (res) {
       var statusCode = res.statusCode;
@@ -91,7 +91,7 @@ function getHttpData(filepath, success, error) {
       if (statusCode !== 200) {
         // 出错回调
         console.log(statusCode + filepath);
-        error();
+        error("服务器相应码：" + statusCode);
         // 消耗响应数据以释放内存
         res.resume();
         return;
@@ -112,9 +112,9 @@ function getHttpData(filepath, success, error) {
         error();
       });
     }).on('error', (e) => {
-      error();
+      error(e);
     });;
   } catch(e) {
-    error();
+    error(e);
   }
 };

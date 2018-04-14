@@ -1,6 +1,6 @@
 var fs = require('fs');
-var strm = require('./libs/strm.js');
-var config = require('./libs/config.json');
+var strm = require('./strm.js');
+var config = require('./config.json');
 var Excel = require('exceljs');
 
 // remind 修改了excelsjs
@@ -22,11 +22,11 @@ strm.BuildRules(config.rules, config.files, {
 
 var CONFIGS = {
   "P-all": {
-    l1: 10,
-    l2: 13,
-    l3: 13,
+    l1: 16,
+    l2: 18,
+    l3: 23,
     head: 1,
-    checkDiff: false
+    checkDiff: false,
   },
   "IP-all": {
     l1: 11,
@@ -36,9 +36,9 @@ var CONFIGS = {
     checkDiff: true
   },
   "P-sum": {
-    l1: 10,
-    l2: 13,
-    l3: 13,
+    l1: 16,
+    l2: 18,
+    l3: 22,
     head: 1,
     checkDiff: false
   },
@@ -76,7 +76,6 @@ function checkDiff(rowOrigin, rowDest) {
           })
         }
       } else {
-        debugger;
         errs.push({
           cellId: i,
           msg: "第" + (i) + "列内容有修改\n" + cellOrigin.text + '\n' + cellDest.text+"\n"
@@ -121,7 +120,7 @@ function checkXsl (dataOrigin, dataDest, nm) {
   dataDest.eachRow({includeEmpty: true}, function(rowDest, i) {
     var skip = false;
     //不检测表头
-    if (fileConfig.head && i < fileConfig.head) {
+    if (fileConfig.head && i <= fileConfig.head) {
       skip = true;
     }
     if (skip) {return}
@@ -188,12 +187,15 @@ function checkDestFiles(origins) {
           
           var originBook = new Excel.Workbook();
           var destBook = new Excel.Workbook();
-            debugger;
           Promise.all([
             fileConfig.checkDiff ? originBook.xlsx.readFile("./原稿/" + nm) : Promise.resolve(0),
             destBook.xlsx.readFile("./译稿/" + nm)
           ]).then(function () {
             checkXsl(originBook.worksheets[0],destBook.worksheets[0], nm);
+            // rich text输出
+            destBook.worksheets[0].eachRow(function (row) {
+              row.getCell(fileConfig.l1).value = row.getCell(fileConfig.l1).text;
+            })
             destBook.xlsx.writeFile("./检测/" + nm).then(() => {
               console.log('详见:/检测/' + nm);
             })

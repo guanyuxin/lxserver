@@ -18,8 +18,8 @@
   </div>
 </template>
 <script>
-import Xeditor from './Xeditor'
-import strm from '../../client/libs/strm'
+import Xeditor from './Xeditor';
+import strm from '../strm';
 export default {
   name: 'MutiTest',
   data () {

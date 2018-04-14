@@ -1,0 +1,11 @@
+{
+  "name": "excel",
+  "version": "0.0.1",
+  "build": 4,
+  "files": [
+    "libs/runExcel.js",
+    "libs/update.js",
+    "libs/strm.js",
+    "libs/package.json"
+  ],
+}
