@@ -43,9 +43,9 @@ var CONFIGS = {
     checkDiff: false
   },
   "IP-sum": {
-    l1: 10,
-    l2: 13,
-    l3: 13,
+    l1: 9,
+    l2: 11,
+    l3: 11,
     head: 0,
     checkDiff: true
   }

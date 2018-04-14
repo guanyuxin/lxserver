@@ -7,15 +7,6 @@
     
     <div :class="con.pass? 'respanel pass':'respanel error'" v-for="(con, index) in cmpResult">
       规则{{index+1}}:{{con.errMessage}}
-      <div class="passPanel" v-for="errData in con.matches">
-        <span class="passIcon">OK</span> {{errData.message}}
-        <div class="diff" v-if="errData.srcDiff">
-          <div class="line">原文：<span v-html="errData.srcDiff"></span></div>
-        </div>
-        <div class="diff" v-if="errData.destDiff">
-          <div class="line">译文：<span v-html="errData.destDiff"></span></div>
-        </div>
-      </div>
       <div class="errpanel" v-for="errData in con.errors">
         <span class="errIcon">X</span> {{errData.message}}
         <div class="diff" v-if="errData.srcDiff">

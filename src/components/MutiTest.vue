@@ -191,6 +191,16 @@ export default {
           dest: "哈哈哈ＡＩＭＬＩＵ哈哈哈",
           assume: 1,
           res: undefined
+        }, {
+          src: "哈哈--哈哈哈",
+          dest: "哈哈－哈哈哈",
+          assume: 1,
+          res: undefined
+        }, {
+          src: "哈哈--哈哈哈",
+          dest: "哈哈－－哈哈哈",
+          assume: -1,
+          res: undefined
         }
       ]
     }

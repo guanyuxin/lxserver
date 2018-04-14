@@ -1,3 +1,4 @@
+var MASK = "*";
 // 将 k >>> v 解析
 // 输入：多行文本
 // k >>> v  #注释  完全匹配
@@ -101,7 +102,11 @@ function BuildTreeByGroup(groups) {
 //找到 str在i位置匹配最短的一个子串
 function MatchTree(tree, str, i) {
   var init = i;
-  var currentNode = tree[str.charAt(init)];
+  var c = str.charAt(init);
+  if (c == MASK) {
+    return -1;
+  }
+  var currentNode = tree[c];
   while (currentNode && init < str.length) {
     if (currentNode.match) {
       return {
@@ -111,17 +116,25 @@ function MatchTree(tree, str, i) {
       };
     }
     init++
-    currentNode = currentNode[str.charAt(init)]
+    var c = str.charAt(init);
+    if (c == MASK) {
+      break;
+    }
+    currentNode = currentNode[c]
   }
   return false;
 }
 
-//找到 str在i位置匹配所有的子串
+//找到 str在匹配所有的子串
 function MatchTreeAllByGroup(tree, str) {
   var matches = {};
   for (var i = 0; i < str.length; i++) {
     var init = i;
-    var currentNode = tree[str.charAt(init)];
+    var c = str.charAt(init);
+    if (c == MASK) {
+      continue;
+    }
+    var currentNode = tree[c];
     while (currentNode && init < str.length) {
       if (currentNode.match !== undefined) {
         if (matches[currentNode.match] === undefined) {
@@ -136,7 +149,11 @@ function MatchTreeAllByGroup(tree, str) {
         break;
       }
       init++
-      currentNode = currentNode[str.charAt(init)]
+      c = str.charAt(init);
+      if (c == MASK) {
+        break;
+      }
+      currentNode = currentNode[c];
     }
   }
   return matches;
@@ -174,13 +191,13 @@ function highlightMatchesRev(str, matches) {
   return dest;
 }
 
-function markMatches(str, matches, maxCount = 100000) {
+function markMatches(str, matches) {
   var dest = '';
   var low = 0;
-  for (var i = 0; i < matches.length && i < maxCount; i++) {
+  for (var i = 0; i < matches.length; i++) {
     dest += str.substring(low, matches[i].begin);
     for (var j = matches[i].begin; j < matches[i].end; j++) {
-      dest += '*';
+      dest += MASK;
     }
     low = matches[i].end;
   }
@@ -209,7 +226,7 @@ var RULES = {
         regRules: cfg.regRules,
       };
     },
-    valid: function (data, rule, removeMatched, cond) {
+    valid: function (data, rule, cond) {
       var a = data.paramA;
       var b = data.paramB;
       var matchesA = MatchTreeAllByGroup(rule.src, a);
@@ -217,30 +234,46 @@ var RULES = {
       var resA = '';
       var resB = '';
       var message = '';
+      var matches = [];
       var errors = [];
 
       for (var key in matchesA) {
         var matchA = matchesA[key] || [];
         var matchB = matchesB[key] || [];
+        
+        matches.push({
+          matchA,
+          matchB
+        })
         if (matchA.length !== matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
             messageShort: `【${rule.srcRaw[key][0]}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
+            matchA,
+            matchB
           })
         }
       }
 
+      // B中出现而A中没有的
       for (var key in matchesB) {
         var matchA = matchesA[key] || [];
         var matchB = matchesB[key] || [];
+        
         if (matchA.length == 0 && matchB.length !== 0) {
+          matches.push({
+            matchA,
+            matchB
+          })
           errors.push({
             message: `${lang[cond.paramA]}中的（${rule.srcRaw[key]}）的数量与${lang[cond.paramB]}中的（${rule.destRaw[key]}）数量不匹配， = ${matchA.length}:${matchB.length}`,
             messageShort: `【${rule.srcRaw[key][0]}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
+            matchA,
+            matchB
           })
         }
       }
@@ -258,6 +291,9 @@ var RULES = {
             end: t.index + t[0].length,
             match: t[0]
           })
+          if (t[0].length == 0) {
+            break;
+          }
         }
         while(t = regRule.dest.exec(b)) {
           matchB.push({
@@ -265,39 +301,33 @@ var RULES = {
             end: t.index + t[0].length,
             match: t[0]
           })
+          if (t[0].length == 0) {
+            break;
+          }
         }
         matchesA[key] = matchA;
         matchesB[key] = matchB;
 
+        matches.push({
+          matchA,
+          matchB
+        })
         if (matchA.length !== matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${regRule.src.source}）的数量与${lang[cond.paramB]}中的（${regRule.dest.source}）数量不匹配， = ${matchA.length}:${matchB.length}`,
             messageShort: `【${regRule.comment || regRule.src.source}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
+            matchA,
+            matchB
           })
         }
       }
       
-      if (removeMatched) {
-        var replacedA = a;
-        var replacedB = b;
-        for (var key in matchesA) {
-          replacedA = markMatches(replacedA, matchesA[key]);
-        }
-        for (var key in matchesB) {
-          replacedB = markMatches(replacedB, matchesB[key]);
-        }
-        replacedA = replacedA.replace(/\*/g, '');
-        replacedB = replacedB.replace(/\*/g, '');
-      }
-
-      
       return {
         pass: errors.length == 0,
         errors: errors,
-        paramA: replacedA,
-        paramB: replacedB,
+        matches,
         message: message
       }
     }
@@ -316,7 +346,7 @@ var RULES = {
         dest: BuildTreeByGroup(cfg.dest)
       };
     },
-    valid: function (data, config, removeMatched, cond) {
+    valid: function (data, config, cond) {
       var a = data.paramA;
       var b = data.paramB;
       var matchesA = MatchTreeAllByGroup(config.src, a);
@@ -325,40 +355,36 @@ var RULES = {
       var resB = '';
       var message = '';
       var errors = [];
+      var matches = [];
 
       for (var key in matchesA) {
         var matchA = matchesA[key] || [];
         var matchB = matchesB[key] || [];
+
         if (matchA.length > matchB.length) {
           errors.push({
             message: `${lang[cond.paramA]}中的（${config.srcRaw[key]}）的数量小于${lang[cond.paramB]}中的（${config.destRaw[key]}）数量， = ${matchA.length}:${matchB.length}`,
             messageShort: `【${config.srcRaw[key][0]}】= ${matchA.length}:${matchB.length}`,
             srcDiff: highlightMatches(a, matchA),
             destDiff: highlightMatches(b, matchB),
+            matchA,
+            matchB
           })
+        } else {
+          // A中出现的B中也需要出现，如果B中出现的更多，则多余的不需要替换
+          matchB.splice(matchA.length, 1000000);
         }
+        matches.push({
+          matchA,
+          matchB
+        })
       }
-      
-      if (removeMatched) {
-        var replacedA = a;
-        var replacedB = b;
-        for (var key in matchesA) {
-          replacedA = markMatches(replacedA, matchesA[key]);
-          if (matchesB[key]) {
-            replacedB = markMatches(replacedB, matchesB[key], matchesA[key].length);
-          }
-        }
-        replacedA = replacedA.replace(/\*/g, '');
-        replacedB = replacedB.replace(/\*/g, '');
-      }
-
       
       return {
         pass: errors.length == 0,
         errors: errors,
-        paramA: replacedA,
-        paramB: replacedB,
-        message: message
+        message: message,
+        matches
       }
     }
   },
@@ -370,13 +396,13 @@ var RULES = {
       config = config.split(/[\n]/)
       return BuildTree(config);
     },
-    valid: function (data, config, removeMatched, cond) {
+    valid: function (data, config, cond) {
       var b = data.paramA;
       var matches = [];
       var str = "";
       for (var i = 0; i < b.length; i++) {
         var res = MatchTree(config, b, i);
-        if (res) {
+        if (res && res.match) {
           matches.push(res);
         }
       }
@@ -388,19 +414,10 @@ var RULES = {
           destDiff: highlightMatches(b, matches),
         }];
       }
-      
-      if (removeMatched) {
-        var replacedB = b;
-        for (var key in matches) {
-          replacedB = markMatches(replacedB, matches[key]);
-        }
-        replacedB = replacedB.replace(/\*/g, '');
-      }
-
       return {
         pass: matches.length == 0,
         errors: errors,
-        paramB: replacedB,
+        matches: matches
       }
     }
   },
@@ -412,14 +429,13 @@ var RULES = {
       config = config.split(/[\n,]/)
       return BuildTree(config);
     },
-    valid: function (data, config, removeMatched, cond) {
+    valid: function (data, config, cond) {
       var b = data.paramA;
       var matches = [];
       var str = "";
       for (var i = 0; i < b.length; i++) {
         var res = MatchTree(config, b, i);
-        if (res) {
-        } else {
+        if (res == false) {
           matches.push({
             begin: i,
             end: i+1,
@@ -433,6 +449,7 @@ var RULES = {
           message: `${lang[cond.paramA]}中例外的字符${matches.map(data=>data.match).join(',')}`,
           messageShort: `${matches.map(data => '【' + data.match + '】(第' + (data.begin+1) + ")").join(' ')}`,
           destDiff: highlightMatches(b, matches),
+          matchA: matches
         }];
       }
       return {
@@ -449,7 +466,7 @@ var RULES = {
     initRule: function (config) {
       return BuildTree(config.split('').reverse().join('').split(/[\n,]/))
     },
-    valid: function (data, config, removeMatched, cond) {
+    valid: function (data, config, cond) {
       var str = data.paramA.split('').reverse().join('');
       var res = MatchTree(config, str, 0);
       
@@ -459,7 +476,8 @@ var RULES = {
         matches.push({
           message: `${lang[cond.paramA]}结尾包含了` + res.match.split('').reverse().join(''),
           messageShort: `${res.match.split('').reverse().join('')}`,
-          srcDiff: highlightMatchesRev(data.paramA, [res])
+          srcDiff: highlightMatchesRev(data.paramA, [res]),
+          matchA: [res]
         })
       } else {
         errors.push({
@@ -510,7 +528,7 @@ var RULES = {
         reg: reg
       }
     },
-    valid: function (data, config, removeMatched, cond) {
+    valid: function (data, config, cond) {
       var a = data.paramA;
       var errors = [];
       if (!a.match(config.reg)) {
@@ -533,23 +551,29 @@ var RULES = {
         comment: (config[1] || reg.source).trim()
       }
     },
-    valid: function (data, config, removeMatched, cond) {
+    valid: function (data, config, cond) {
       var a = data.paramA;
       var matches = [];
       var errors = [];
       var t;
-      while(t = config.reg.exec(a)) {
-        matches.push({
-          begin: t.index,
-          end: t.index + t[0].length,
-          match: t[0],
-        })
+      if (config.reg.source) {
+        while(t = config.reg.exec(a)) {
+          matches.push({
+            begin: t.index,
+            end: t.index + t[0].length,
+            match: t[0],
+          })
+          if (t[0].length == 0) {
+            break;
+          }
+        }
       }
       if (matches.length !== 0) {
         errors.push({
           message: "正则表达式" + config.comment,
           messageShort: "【" + config.comment + "】",
           destDiff: highlightMatches(a, matches),
+          matchA: matches
         })
       }
       return {
@@ -599,19 +623,28 @@ Rule.prototype.valid = function(line) {
   for (var key in this.conds) {
     var cond = this.conds[key].cond;
     var parsed = this.conds[key].parsed;
-    var match = RULES[cond.type].valid({
+    var result = RULES[cond.type].valid({
       paramA: line[cond.paramA],
       paramB: line[cond.paramB],
-    }, parsed, this.removeMatched, cond);
-
-    if (this.removeMatched) {
-      line[cond.paramA] = match.paramA;
-      line[cond.paramB] = match.paramB;
+    }, parsed, cond);
+    
+    if (Array.isArray(result.matches)) {
+      for (var i = 0; i < result.matches.length; i++) {
+        var match = result.matches[i];
+        if (this.removeMatched) {
+          if (match.matchA) {
+            line[cond.paramA] = markMatches(line[cond.paramA], match.matchA);
+            line[cond.paramB] = markMatches(line[cond.paramB], match.matchB);
+          } else {
+            line[cond.paramA] = markMatches(line[cond.paramA], match);
+          }
+        }
+      }
     }
 
-    lastTest = match;
+    lastTest = result;
     // 或者的关系
-    if (match.pass) {
+    if (result.pass) {
       lastTest.errMessage = this.errMessage;
       return lastTest;
     }
@@ -685,4 +718,5 @@ var exports = {
     runCallbacks();
   }
 }
-export default exports;
+
+module.exports = exports;

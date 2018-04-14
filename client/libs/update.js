@@ -5,7 +5,7 @@ var versionVar = require('./version.json');
 
 var host = "http://guanyuxin.com:3000/";
 //var host = "http://localhost:3000/";
-var path = "client/";
+var path = "client/lib/";
 
 function logInfo(type, msg) {
   console.log(msg)
@@ -65,7 +65,7 @@ checkUpdate(function (data) {
     logInfo('updateInfo', '下载完成');
     var moveing = res.map((file, i) => {
       return new Promise((resolve, reject) =>{
-        fse.rename('./tmp/' + file, './' + file, () => {
+        fse.rename('./tmp/' + file, './libs/' + file, () => {
           resolve(file);
         })
       })
