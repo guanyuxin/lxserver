@@ -5,7 +5,7 @@ var versionVar = require('./version.json');
 
 var host = "http://guanyuxin.com:3000/";
 //var host = "http://localhost:3000/";
-var path = "client/lib/";
+var path = "client/libs/";
 
 function logInfo(type, msg) {
   console.log(msg)
@@ -15,7 +15,7 @@ function checkUpdate(cb) {
   getHttpData(host + 'configVersion', function (res) {
     var v = parseInt(res);
     if (v > versionVar.version) {
-      logInfo('updateInfo', '更新规则');
+      logInfo('updateInfo', '更新规则(' + versionVar.version + ' ==> ' + v + ')');
       getHttpData(host + 'config', function (res) {
         try {
           var d = JSON.parse(res);
@@ -37,7 +37,7 @@ function checkUpdate(cb) {
     
     packageConfig.build = packageConfig.build || -1;
     if (packageConfig.build < data.build) {
-      logInfo('updateInfo', '检测到更新');
+      logInfo('updateInfo', '检测到更新(' + data.build " ==> " + packageConfig.build + ')');
       cb && cb(data);
     } else {
       logInfo('updateInfo', '最新版本');
