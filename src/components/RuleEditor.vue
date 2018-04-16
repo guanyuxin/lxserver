@@ -155,6 +155,7 @@ export default {
   text-align: center;
   box-shadow: 0px 0px 4px rgba(0,0,0,.4);
   margin: 10px;
+  flex: 1;
   cursor: pointer;
 }
 .addBtn:hover {

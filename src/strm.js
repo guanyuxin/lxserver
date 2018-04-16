@@ -718,5 +718,4 @@ var exports = {
     runCallbacks();
   }
 }
-
-module.exports = exports;
+export default exports;

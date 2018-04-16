@@ -7,7 +7,7 @@ const app = express();
 
 app.use(express.static('dist'));
 app.use('/client', function(req, res, next) {
-  req.path = decodeURIComponent(req.path)
+  req.path = decodeURIComponent(req.path);
   console.log(req.path)
   next();
 });
@@ -41,6 +41,11 @@ function saveRules(packageObj) {
   });
 }
 
+function saveTest(packageObj) {
+  return fse.outputFile(__dirname+'/var/tests.json', packageObj);
+}
+
+
 
 app.get('/updateAndRestartServer', function(req, res) {
   require('child_process').execFile(__dirname + '/plus.sh', [], {
@@ -63,6 +68,11 @@ app.get('/config', function(req, res) {
   res.sendFile(__dirname+'/var/config.json');
 })
 
+app.get('/tests', function(req, res) {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.sendFile(__dirname+'/var/tests.json');
+})
+
 app.get('/configVersion', async function(req, res) {
   res.set('Access-Control-Allow-Origin', '*');
   try {
@@ -77,5 +87,11 @@ app.get('/configVersion', async function(req, res) {
 app.post('/config', async function(req, res) {
   res.set('Access-Control-Allow-Origin', '*');
   await saveRules(req.body);
+  res.send('{"status":0}');
+})
+
+app.post('/tests', async function(req, res) {
+  res.set('Access-Control-Allow-Origin', '*');
+  await saveTest(req.body);
   res.send('{"status":0}');
 })

@@ -6,20 +6,37 @@
       <div class="cell cellFull">译文</div>
       <div class="cell">预期</div>
       <div class="cell">结果</div>
-      <div class="cell">功能</div>
+      <div class="cell">编辑</div>
+      <div class="cell">详情</div>
     </div>
-    <div class="line" v-for="testCase in tests" :class="{'err':testCase.res && testCase.assume !== testCase.res,'pass':testCase.res && testCase.assume === testCase.res}">
-      <div class="cell cellFull">{{testCase.src}}</div>
-      <div class="cell cellFull">{{testCase.dest}}</div>
-      <div class="cell">{{mapStatus(testCase.assume)}}</div>
-      <div class="cell">{{mapStatus(testCase.res)}}</div>
-      <div class="cell"><div class="smallbtn" v-on:click="check(testCase)">检测</div></div>
+    <div v-for="testCase in tests">
+      <div v-if="testCase.editing" class="line" :class="{'err':testCase.res && testCase.assume !== testCase.res,'pass':testCase.res && testCase.assume === testCase.res}">
+        <div class="cell cellFull"><Xeditor v-model="testCase.src"></Xeditor></div>
+        <div class="cell cellFull"><Xeditor v-model="testCase.dest"></Xeditor></div>
+        <div class="cell" v-on:click="changeAssume(testCase)">{{mapStatus(testCase.assume)}}</div>
+        <div class="cell">{{mapStatus(testCase.res)}}</div>
+        <div class="cell"><div class="smallbtn" v-on:click="saveCase(testCase)">确定</div></div>
+        <div class="cell"><div class="smallbtn" v-on:click="deleteCase(testCase)">删除</div></div>
+      </div><div v-else class="line"  :class="{'err':testCase.res && testCase.assume !== testCase.res,'pass':testCase.res && testCase.assume === testCase.res}">
+        <div class="cell cellFull">{{testCase.src}}</div>
+        <div class="cell cellFull">{{testCase.dest}}</div>
+        <div class="cell">{{mapStatus(testCase.assume)}}</div>
+        <div class="cell">{{mapStatus(testCase.res)}}</div>
+        <div class="cell"><div class="smallbtn" v-on:click="saveCase(testCase)">编辑</div></div>
+        <div class="cell"><div class="smallbtn" v-on:click="check(testCase)">详情</div></div>
+      </div>
+    </div>
+    <div class="line">
+      <div v-on:click="add" class="addBtn">添加测试</div>
+      <div v-on:click="saveAll" class="addBtn">保存</div>
     </div>
   </div>
 </template>
 <script>
 import Xeditor from './Xeditor';
 import strm from '../strm';
+import XHR from '../xhr'
+import Vue from 'vue'
 export default {
   name: 'MutiTest',
   data () {
@@ -210,6 +227,16 @@ export default {
   },
   watch: {
   },
+
+  mounted: function() {
+    XHR.GET('//'+location.hostname+':3000/tests', (tests) => {
+      for (var i = 0; i < tests.length; i++) {
+        Vue.set(tests[i], 'editing', false);
+        Vue.set(tests[i], 'res', '');
+      }
+      this.tests = tests;
+    })
+  },
   methods: {
     cmp() {
       var res = [];
@@ -218,8 +245,35 @@ export default {
         testCase.res = strm.validData(testCase.src, testCase.dest, 1);
       }
     },
+    add() {
+      this.tests.push({
+        src: "",
+        dest: "",
+        assume: 1,
+        editing: true
+      })
+    },
+    saveCase(testCase) {
+      testCase.editing = !testCase.editing;
+    },
+    deleteCase(c) {
+      for (var i = 0; i < this.tests.length; i++) {
+        var testCase = this.tests[i];
+        if (c == testCase) {
+          this.tests.splice(i, 1);
+        }
+      }
+    },
     check(e) {
       this.$emit('check', e)
+    },
+    changeAssume(testCase) {
+      testCase.assume = -testCase.assume;
+    },
+    saveAll() {
+      XHR.POSTStr('//'+location.hostname+':3000/tests', JSON.stringify(this.tests), function (e) {
+        alert('保存成功');
+      })
     },
     mapStatus(a) {
       if (a == 1) {

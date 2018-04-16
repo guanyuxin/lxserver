@@ -37,10 +37,10 @@ function checkUpdate(cb) {
     
     packageConfig.build = packageConfig.build || -1;
     if (packageConfig.build < data.build) {
-      logInfo('updateInfo', '检测到更新(' + data.build " ==> " + packageConfig.build + ')');
+      logInfo('updateInfo', '检测到更新(' + data.build + " ==> " + packageConfig.build + ')');
       cb && cb(data);
     } else {
-      logInfo('updateInfo', '最新版本');
+      logInfo('updateInfo', '工具款为最新版本，继续..');
     }
   }, function() {
     logInfo('updateInfo', '无法连接至更新服务器');
@@ -83,7 +83,6 @@ function getHttpData(filepath, success, error) {
   success = success || function () {};
   error = error || function () {};
   var url = filepath + '?r=' + Math.random();
-  console.log(url);
   try {
     http.get(url, function (res) {
       var statusCode = res.statusCode;
