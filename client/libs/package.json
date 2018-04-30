@@ -2,6 +2,7 @@
   "name": "excel",
   "version": "0.0.1",
   "build": 5,
+  "updaterBuild": 1,
   "files": [
     "runExcel.js",
     "update.js",

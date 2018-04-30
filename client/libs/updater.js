@@ -34,12 +34,12 @@ function checkUpdate(cb) {
   getHttpData(host + path + 'package.json', function (res) {
     var data = JSON.parse(res);
     
-    packageConfig.build = packageConfig.build || -1;
-    if (packageConfig.build < data.build) {
-      logInfo('updateInfo', '检测到更新(' + data.build + " ==> " + packageConfig.build + ')');
+    packageConfig.updaterBuild = packageConfig.updaterBuild || -1;
+    if (packageConfig.updaterBuild < data.updaterBuild) {
+      logInfo('updateInfo', '检测到一级更新(' + data.updaterBuild + " ==> " + packageConfig.updaterBuild + ')');
       cb && cb(data);
     } else {
-      logInfo('updateInfo', '工具款为最新版本，继续..');
+      //logInfo('updateInfo', '更新器为最新版本，继续..');
     }
   }, function() {
     logInfo('updateInfo', '无法连接至更新服务器');
