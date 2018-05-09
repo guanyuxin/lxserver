@@ -1,11 +1,12 @@
 {
   "name": "excel",
   "version": "0.0.1",
-  "build": 5,
+  "build": 6,
   "updaterBuild": 1,
   "files": [
     "runExcel.js",
     "update.js",
+    "updater.js",
     "strm.js",
     "package.json"
   ]

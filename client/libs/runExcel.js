@@ -192,9 +192,11 @@ function checkDestFiles(origins) {
             destBook.xlsx.readFile("./译稿/" + nm)
           ]).then(function () {
             checkXsl(originBook.worksheets[0],destBook.worksheets[0], nm);
-            // rich text输出
+            // rich text转换
             destBook.worksheets[0].eachRow(function (row) {
-              row.getCell(fileConfig.l1).value = row.getCell(fileConfig.l1).text;
+              row.eachCell(function (cell) {
+                cell.value = cell.text;
+              })
             })
             destBook.xlsx.writeFile("./检测/" + nm).then(() => {
               console.log('详见:/检测/' + nm);

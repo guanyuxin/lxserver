@@ -6,11 +6,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 app.use(express.static('dist'));
-app.use('/client', function(req, res, next) {
-  req.path = decodeURIComponent(req.path);
-  console.log(req.path)
-  next();
-});
+
 app.use('/client', express.static('client'));
 app.use(bodyParser.text())
 app.use(bodyParser.urlencoded({ extended: false, limit:'50mb' }))
@@ -87,11 +83,5 @@ app.get('/configVersion', async function(req, res) {
 app.post('/config', async function(req, res) {
   res.set('Access-Control-Allow-Origin', '*');
   await saveRules(req.body);
-  res.send('{"status":0}');
-})
-
-app.post('/tests', async function(req, res) {
-  res.set('Access-Control-Allow-Origin', '*');
-  await saveTest(req.body);
   res.send('{"status":0}');
 })
