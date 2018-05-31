@@ -89,6 +89,25 @@
 	transform: translate3d(0, 0, 0);
   }
 }
+@-webkit-keyframes fadeInTop2 {
+  0% {
+	opacity: 0;
+	-webkit-filter: blur(30px);
+	-webkit-transform: translate3d(0, 20%, 0);
+	transform: translate3d(40%, 0%, 0);
+  }
+
+  70% {
+	opacity: .8;
+	-webkit-filter: blur(0px);
+  }
+
+  100% {
+	opacity: 1;
+	-webkit-transform: translate3d(0, 0, 0);
+	transform: translate3d(0, 0, 0);
+  }
+}
 .animated {
   -webkit-animation-duration: .5s;
   animation-duration: .5s;
@@ -107,6 +126,12 @@
 .d4 {
 	animation-delay: 2.8s;
 }
+.d5 {
+	animation-delay: 3.5s;
+}
+.d6 {
+	animation-delay: 4.2s;
+}
 
 .fadeInRight {
   -webkit-animation-name: fadeInRight;
@@ -120,6 +145,10 @@
 .fadeInTop {
   -webkit-animation-name: fadeInTop;
   animation-duration: 1.7s;
+}
+.fadeInTop2 {
+  -webkit-animation-name: fadeInTop2;
+  animation-duration: 2s;
 }
 
 @-webkit-keyframes jackInTheBox {
@@ -334,6 +363,7 @@ a {
 .arrowright {
 	right: 0;
 	transform: rotate(180deg);
+	display: none;
 }
 .arrowleft {
 	left: 0;
@@ -515,16 +545,28 @@ a {
 						<img class="animated flipInX d1 deepin" p-src="./imgs/album/a3_3.jpg" style="width:360px;height:500px;margin:10px;margin-left:0"/>
 					</div>
 					<div class="cardCenter" style="flex:1">
-						<div class="animated fadeInRight">不早不晚</div>
-						<div class="animated fadeInRight d1">刚好在最好的年华</div>
-						<div class="animated fadeInRight d2">遇见彼此</div>
+						<div class="animated fadeInRight d2">奋斗在北京城中</div>
+						<div class="animated fadeInRight d3">你是自强不息的女子</div>
+						<div class="animated fadeInRight d4">穿上鲜艳的礼服</div>
+						<div class="animated fadeInRight d5">你是世上最美的新娘</div>
 					</div>
 				</div>
-				<div class="apage type2 nextAPage deep">
-					<img class="deepin" p-src="./imgs/album/a6.jpg"/>
-				</div>
-				<div class="apage type2 nextAPage deep">
+				<div class="apage type2 nextAPage deep" style="display: flex;
+			    height: 100%;
+			    flex-direction: column;">
+					<div class="cardCenter" style="flex:1">
+						<div class="animated fadeInTop2">曾经</div>
+						<div class="animated fadeInTop2 d2">青春有很多的遗憾</div>
+						<div class="animated fadeInTop2 d4">现在我在庆幸</div>
+						<div class="animated fadeInTop2 d6">是多少幸运能最终与你相遇</div>
+					</div>
 					<img class="deepin"  p-src="./imgs/album/a5.jpg"/>
+					<div class="cardCenter" style="flex:1">
+						<div class="animated fadeInTop2">命运的红绳</div>
+						<div class="animated fadeInTop2 d2">让我们不早不晚</div>
+						<div class="animated fadeInTop2 d4">刚好在最好的年华</div>
+						<div class="animated fadeInTop2 d6">遇见彼此</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -543,19 +585,49 @@ a {
 	<div class="arrowleft arrowCon">
 		<span class="arrow"></span>
 	</div>
+	<style>
+	.loading {
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0,0,0,.8);
+	}
+	.loading .innerPanel {
+		width: 200px;
+		height: 200px;
+		background: #ccc;
+		color: #333;
+		border-radius: 50%;
+		font-size: 30px;
+		font-weight: bold;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	</style>
+	<div class="loading">
+		<div class="innerPanel">加载中</div>
+	</div>
 </body>
 <script src="./zepto.js"></script>
 <script src="./fastclick.js"></script>
 <script>
 
-	function prepare(callback) {
+	function prepare(callback, progress) {
 		var imgs = $('[p-src]');
 		var t = imgs.length;
+		var finished = 0;
 		imgs.each(function (i, img) {
 			img = $(img);
 			img.on('load', function () {
-				t--;
-				if (t == 0) {
+				finished++;
+				progress && progress(finished + "/" + t);
+				if (t == finished) {
 					callback();
 				}
 			});
@@ -718,13 +790,17 @@ a {
 			}, a.pause || 0)
 			a.playing = true;
 			a.currentPage--;
+			a.onPage && a.onPage(a.currentPage);
 			setTimeout(function () {
 				a.playing = false;
 			}, 500)
 		}
 	}
 
-	prepare(function () {
+	function start() {
+		$('.loading').remove();
+		$('.arrowright').css('display', 'flex')
+		audio.play();
 		showCurrentPage();
 		var out = new Album($(".bg"));
 		var pics = new Album($('.album'), 300);
@@ -740,7 +816,6 @@ a {
 				$('.arrowright').css('display', 'none');
 
 			}
-
 			if (i > 0) {
 				$('.arrowleft').css('display', 'flex');
 			} else {
@@ -752,8 +827,15 @@ a {
 				}, 500)
 			}
 		}
+	}
+	prepare(function () {
+		$('.loading .innerPanel').html('点击开始')
+		$('.loading').click(start)
+	}, function (prec) {
+		$('.loading .innerPanel').html('加载中' + prec)
 	});
-
+	var audio = new Audio();
+	audio.src = "./imgs/bg.aac";
 	// 视差
 	(function() {
 		var dpins = $('.deepin')
