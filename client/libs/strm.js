@@ -295,6 +295,7 @@ var RULES = {
             break;
           }
         }
+        regRule.src.lastIndex = 0;
         while(t = regRule.dest.exec(b)) {
           matchB.push({
             begin: t.index,
@@ -305,6 +306,7 @@ var RULES = {
             break;
           }
         }
+        regRule.dest.lastIndex = 0;
         matchesA[key] = matchA;
         matchesB[key] = matchB;
 
@@ -523,19 +525,49 @@ var RULES = {
     title: "符合正则表达式",
     paramA: true,
     initRule: function (config) {
-      var reg = new RegExp(config, 'g');
+      var regs = config.split('\n');
+      var res = [];
+      for (var i = 0; i < regs.length; i++) {
+        res.push(new RegExp(regs[i], 'g'));
+      }
       return {
-        reg: reg
+        reg: res
       }
     },
     valid: function (data, config, cond) {
       var a = data.paramA;
       var errors = [];
-      if (!a.match(config.reg)) {
-        errors.push(`${lang[cond.paramA]} 的内容`)
+      var res;
+      var matches = [];
+      var t;
+      a = a;
+      for (var i = 0; i < config.reg.length; i++) {
+        if (t = config.reg[i].exec(a)) {
+          config.reg[i].lastIndex = 0
+          res = {
+            begin: t.index,
+            end: t.index + t[0].length,
+            match: t[0],
+          }
+          break;
+        }
+      }
+      if (res) {
+        matches.push({
+          message: `${lang[cond.paramA]}匹配了` + res.match.split('').reverse().join(''),
+          messageShort: `${res.match.split('').reverse().join('')}`,
+          srcDiff: highlightMatchesRev(data.paramA, [res]),
+          matchA: [res]
+        })
+      } else {
+        errors.push({
+          message: `${lang[cond.paramA]}没有要求内容`,
+          messageShort: ``,
+        })
       }
       return {
-        pass: errors.length == 0,
+        pass: !!res,
+        matches: matches,
         errors: errors
       }
     }
@@ -567,6 +599,7 @@ var RULES = {
             break;
           }
         }
+        config.reg.lastIndex = 0;
       }
       if (matches.length !== 0) {
         errors.push({

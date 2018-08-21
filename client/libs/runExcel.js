@@ -62,6 +62,8 @@ for (var key of process.argv.splice(2)) {
 opts.head = opts.head || 0;
 var fileConfig = CONFIGS[opts.group];
 
+strm.setEnv(opts.group);
+
 function checkDiff(rowOrigin, rowDest) {
   var errs = [];
   rowDest.eachCell({includeEmpty: true}, function (cellDest, i) {
